@@ -1,11 +1,30 @@
 voices:
   - id: "za_male_1"
     name: "Thabo"
-    description: "Deep male voice with a South African accent"
-    model: "kokoro-v0.8-za.onnx"
+    gender: "Male"
+    accent_region: "Gauteng"
+    description: "Deep male voice with a South African English accent"
+    recommended_speed: 1.0
   - id: "za_female_1"
     name: "Zanele"
-    description: "Clear female voice with a South African accent"
-    model: "kokoro-v0.8-za.onnx"
+    gender: "Female"
+    accent_region: "KwaZulu-Natal"
+    description: "Clear female voice with a South African English accent"
+    recommended_speed: 1.0
+  - id: "za_male_2"
+    name: "Sipho"
+    gender: "Male"
+    accent_region: "Eastern Cape"
+    description: "Warm male voice with a Xhosa-influenced English accent"
+    recommended_speed: 0.95
+  - id: "za_female_2"
+    name: "Lindiwe"
+    gender: "Female"
+    accent_region: "Limpopo"
+    description: "Soft female voice with a Northern Sotho-influenced accent"
+    recommended_speed: 1.0
+
 default_voice: "za_male_1"
 engine: "kokoro-82m"
+model_file: "kokoro-v1.0.onnx"
+voices_file: "voices.bin"

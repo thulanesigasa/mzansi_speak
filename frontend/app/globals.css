@@ -440,6 +440,23 @@ html {
     color: #1c1c1c;
 }
 
+.voice-name {
+    display: block;
+    font-weight: 600;
+}
+
+.voice-meta {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 0.15rem;
+}
+
+.dropdown-item:hover .voice-meta {
+    color: #1c1c1c;
+    opacity: 0.7;
+}
+
 /* ============================================
    GENERATE BUTTON
    ============================================ */

@@ -2,14 +2,22 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 
-const VOICES = [
-    { value: "za_male_1", label: "Thabo (Male)" },
-    { value: "za_female_1", label: "Zanele (Female)" },
-];
+interface Voice {
+    id: string;
+    name: string;
+    gender: string;
+    accent_region: string;
+    description: string;
+    recommended_speed: number;
+}
+
+const API_BASE = "http://localhost:8000";
 
 export default function Home() {
     const [text, setText] = useState("");
-    const [voice, setVoice] = useState(VOICES[0]);
+    const [voices, setVoices] = useState<Voice[]>([]);
+    const [voice, setVoice] = useState<Voice | null>(null);
+    const [voicesLoading, setVoicesLoading] = useState(true);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -19,6 +27,29 @@ export default function Home() {
 
     const toggleTheme = useCallback(() => {
         setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+    }, []);
+
+    // Fetch voices from backend on mount
+    useEffect(() => {
+        const fetchVoices = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/voices`);
+                const data = await res.json();
+                const list: Voice[] = data.voices || [];
+                setVoices(list);
+                // Set default voice
+                const defaultId = data.default_voice || "";
+                const defaultVoice = list.find((v) => v.id === defaultId) || list[0] || null;
+                setVoice(defaultVoice);
+            } catch {
+                // Fallback: empty list
+                setVoices([]);
+                setVoice(null);
+            } finally {
+                setVoicesLoading(false);
+            }
+        };
+        fetchVoices();
     }, []);
 
     // Close dropdown on outside click
@@ -33,18 +64,18 @@ export default function Home() {
     }, []);
 
     const handleGenerate = async () => {
-        if (!text.trim()) return;
+        if (!text.trim() || !voice) return;
         setLoading(true);
         setAudioUrl(null);
         try {
-            const response = await fetch("http://localhost:8000/generate", {
+            const response = await fetch(`${API_BASE}/generate`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text, voice_id: voice.value }),
+                body: JSON.stringify({ text, voice_id: voice.id }),
             });
             const data = await response.json();
             if (data.status === "success") {
-                setAudioUrl(`http://localhost:8000/api/audio/${data.cache_key}.wav`);
+                setAudioUrl(`${API_BASE}/api/audio/${data.cache_key}.wav`);
             } else {
                 alert("Generation failed: " + data.message);
             }
@@ -54,6 +85,8 @@ export default function Home() {
             setLoading(false);
         }
     };
+
+    const voiceLabel = voice ? `${voice.name} (${voice.gender})` : "Select a voice";
 
     return (
         <div id="top" className="page-root" data-theme={theme}>
@@ -118,21 +151,25 @@ export default function Home() {
                                         className="dropdown-btn"
                                         onClick={() => setDropdownOpen(!dropdownOpen)}
                                         aria-expanded={dropdownOpen}
+                                        disabled={voicesLoading}
                                     >
-                                        <span>{voice.label}</span>
+                                        <span>{voicesLoading ? "Loading voices..." : voiceLabel}</span>
                                         <span className={`dropdown-arrow ${dropdownOpen ? "open" : ""}`}>&#9660;</span>
                                     </button>
-                                    {dropdownOpen && (
+                                    {dropdownOpen && voices.length > 0 && (
                                         <ul className="dropdown-list" role="listbox">
-                                            {VOICES.map((v) => (
+                                            {voices.map((v) => (
                                                 <li
-                                                    key={v.value}
+                                                    key={v.id}
                                                     role="option"
-                                                    className={`dropdown-item ${voice.value === v.value ? "active" : ""}`}
+                                                    className={`dropdown-item ${voice?.id === v.id ? "active" : ""}`}
                                                     onClick={() => { setVoice(v); setDropdownOpen(false); }}
                                                 >
-                                                    {v.label}
-                                                    {voice.value === v.value && <span className="check">&#10003;</span>}
+                                                    <div>
+                                                        <span className="voice-name">{v.name}</span>
+                                                        <span className="voice-meta">{v.gender} / {v.accent_region}</span>
+                                                    </div>
+                                                    {voice?.id === v.id && <span className="check">&#10003;</span>}
                                                 </li>
                                             ))}
                                         </ul>
@@ -141,7 +178,7 @@ export default function Home() {
 
                                 <button
                                     onClick={handleGenerate}
-                                    disabled={loading || !text.trim()}
+                                    disabled={loading || !text.trim() || !voice}
                                     className="gen-btn"
                                 >
                                     <span>{loading ? "Processing..." : "Generate Audio"}</span>
