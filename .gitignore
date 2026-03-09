@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+venv/
+env/
+.env
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Temporary IDE files
+.vscode/
+.idea/
+
+# Application generated files
+backend/data/outputs/*.wav
+**/node_modules/

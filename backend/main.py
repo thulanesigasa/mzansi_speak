@@ -21,33 +21,52 @@ class TTSRequest(BaseModel):
     text: str
     voice_id: str
 
-# Initialize client (stub)
-MODEL_PATH = "data/models/kokoro-v0.8-za.onnx"
-client = KokoroClient(MODEL_PATH)
+# Initialize client
+# Note: voices.bin is typically required by kokoro-onnx
+MODEL_PATH = "data/models/kokoro-v1.0.onnx"
+VOICES_PATH = "data/models/voices.bin"
+client = KokoroClient(MODEL_PATH, VOICES_PATH)
 
 @app.get("/")
 async def root():
     return {"message": "Welcome to Mzansi-Speak API", "status": "online"}
 
-@app.post("/api/tts", dependencies=[Depends(rate_limit)])
+@app.post("/generate", dependencies=[Depends(rate_limit)])
 async def generate_speech(request: TTSRequest):
     if not request.text.strip():
         raise HTTPException(status_code=400, detail="Text cannot be empty")
     
-    # Check cache (logic stub)
     cache_key = get_cache_key(request.text, request.voice_id)
+    output_path = os.path.join("data/outputs", f"{cache_key}.wav")
+    
+    # Check cache first
+    if os.path.exists(output_path):
+        return {
+            "status": "success",
+            "cache_key": cache_key,
+            "audio_url": f"/api/audio/{cache_key}.wav"
+        }
     
     # Generate speech
-    audio = client.generate(request.text, request.voice_id)
+    success = client.generate(request.text, request.voice_id, output_path)
     
-    if not audio:
-        return {"status": "error", "message": "TTS Engine not ready or model missing"}
+    if not success:
+        return {"status": "error", "message": "TTS Engine fail or model missing"}
         
     return {
         "status": "success",
         "cache_key": cache_key,
         "audio_url": f"/api/audio/{cache_key}.wav"
     }
+
+from fastapi.responses import FileResponse
+
+@app.get("/api/audio/{filename}")
+async def get_audio(filename: str):
+    file_path = os.path.join("data/outputs", filename)
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type="audio/wav")
+    raise HTTPException(status_code=404, detail="Audio file not found")
 
 if __name__ == "__main__":
     import uvicorn

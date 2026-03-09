@@ -1,27 +1,35 @@
 import os
-import onnxruntime as ort
-import numpy as np
+import scipy.io.wavfile as wavfile
+from kokoro_onnx import Kokoro
 
 class KokoroClient:
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, voices_path: str):
         self.model_path = model_path
-        self.session = None
-        if os.path.exists(model_path):
-            self.session = ort.InferenceSession(model_path)
+        self.voices_path = voices_path
+        self.kokoro = None
+        if os.path.exists(model_path) and os.path.exists(voices_path):
+            self.kokoro = Kokoro(model_path, voices_path)
     
-    def generate(self, text: str, voice_id: str):
+    def generate(self, text: str, voice_id: str, output_path: str):
         """
-        Logic for generating speech from text using the Kokoro-82M engine.
-        This is a stub for the actual ONNX inference logic.
+        Synthesize text to audio and save as .wav in data/outputs/.
         """
-        if not self.session:
-            return None
+        if not self.kokoro:
+            return False
             
-        # Actual implementation would involve:
-        # 1. Phonemization
-        # 2. ONNX Inference
-        # 3. Post-processing to audio bytes
-        return b"audio_data_stub"
+        try:
+            samples, sample_rate = self.kokoro.create(
+                text, 
+                voice=voice_id, 
+                speed=1.0, 
+                lang="en-us" # Defaulting for now
+            )
+            wavfile.write(output_path, sample_rate, samples)
+            return True
+        except Exception as e:
+            print(f"Error during synthesis: {e}")
+            return False
 
     def is_ready(self):
-        return self.session is not None
+        return self.kokoro is not None
+
