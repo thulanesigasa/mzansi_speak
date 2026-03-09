@@ -8,11 +8,11 @@ const config: Config = {
         extend: {
             colors: {
                 mzansi: {
-                    dark: "#2A1617",
-                    muted: "#7A4B47",
-                    light: "#FFFB97",
-                    orange: "#FE7F42",
-                    red: "#B32C1A"
+                    dark: "#000000",
+                    muted: "#333333", // Used for borders and dark backgrounds
+                    light: "#ffffff",
+                    orange: "#ff9800",
+                    red: "#cc7a00" // Darker orange for hovers
                 }
             }
         },
