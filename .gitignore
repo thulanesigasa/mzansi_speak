@@ -22,3 +22,11 @@ __pycache__/
 # Application generated files
 backend/data/outputs/*.wav
 **/node_modules/
+
+# AI Models & Weights (Do not commit large binary/json files)
+backend/data/models/*.onnx
+backend/data/models/*.bin
+backend/data/models/*.json
+
+# OS files
+.DS_Store

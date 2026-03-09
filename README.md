@@ -11,7 +11,21 @@ Mzansi-Speak is a high-performance South African Text-to-Speech (TTS) engine rel
 
 The application is split into two components that must be run simultaneously: the backend API and the frontend UI.
 
-### 1. Start the Backend (FastAPI)
+### 1. Download the AI Model Weights
+
+Before running the backend, you MUST download the `kokoro-onnx` neural network models, as they are too large to store in Git.
+
+1. Open a terminal and navigate to the models directory:
+   ```bash
+   cd backend/data/models/
+   ```
+2. Download the ONNX model and the voices configuration:
+   ```bash
+   wget https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
+   wget https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin -O voices.json
+   ```
+
+### 2. Start the Backend (FastAPI)
 
 1. Open a terminal and navigate to the backend directory:
    ```bash
