@@ -4,6 +4,18 @@
 
 html {
     scroll-behavior: smooth;
+    background-color: #1c1c1c;
+    transition: background-color 0.4s ease;
+}
+
+html[data-theme="light"],
+html[data-theme="light"] body {
+    background-color: #f2f2f2;
+}
+
+html[data-theme="dark"],
+html[data-theme="dark"] body {
+    background-color: #1c1c1c;
 }
 
 /* ============================================

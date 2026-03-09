@@ -26,8 +26,18 @@ export default function Home() {
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const toggleTheme = useCallback(() => {
-        setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+        setTheme((prev) => {
+            const next = prev === "dark" ? "light" : "dark";
+            console.log("Theme toggled:", prev, "->", next);
+            return next;
+        });
     }, []);
+
+    // Sync data-theme attribute to html and body so CSS vars cascade everywhere
+    useEffect(() => {
+        document.documentElement.setAttribute("data-theme", theme);
+        document.body.setAttribute("data-theme", theme);
+    }, [theme]);
 
     // Fetch voices from backend on mount
     useEffect(() => {
