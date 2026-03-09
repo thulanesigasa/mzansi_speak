@@ -1,0 +1,11 @@
+voices:
+  - id: "za_male_1"
+    name: "Thabo"
+    description: "Deep male voice with a South African accent"
+    model: "kokoro-v0.8-za.onnx"
+  - id: "za_female_1"
+    name: "Zanele"
+    description: "Clear female voice with a South African accent"
+    model: "kokoro-v0.8-za.onnx"
+default_voice: "za_male_1"
+engine: "kokoro-82m"
