@@ -103,10 +103,13 @@ export default function Home() {
             {/* Navigation */}
             <nav className="navbar">
                 <a href="#top" className="logo">ms.</a>
-                <button type="button" className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
-                    <span className="toggle-track">
-                        <span className="toggle-thumb" />
-                    </span>
+                <button
+                    type="button"
+                    className="theme-btn"
+                    onClick={toggleTheme}
+                    aria-label="Toggle theme"
+                >
+                    {theme === "dark" ? "\u263D" : "\u2600"}
                 </button>
             </nav>
 
