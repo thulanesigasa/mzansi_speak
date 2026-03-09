@@ -9,6 +9,8 @@ export default function Home() {
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const audioRef = useRef<HTMLAudioElement>(null);
 
+    const [theme, setTheme] = useState<"dark" | "light">("dark");
+
     const handleGenerate = async () => {
         if (!text.trim()) return;
 
@@ -41,16 +43,39 @@ export default function Home() {
         }
     };
 
+    const isDark = theme === "dark";
+
     return (
-        <div className="min-h-screen bg-mzansi-dark text-mzansi-light font-sans selection:bg-mzansi-orange selection:text-mzansi-dark overflow-x-hidden relative">
+        <div className={`min-h-screen font-sans overflow-x-hidden relative transition-colors duration-500
+            ${isDark ? "bg-mzansi-dark text-mzansi-light selection:bg-mzansi-orange selection:text-mzansi-dark"
+                : "bg-mzansi-light text-mzansi-dark selection:bg-mzansi-muted selection:text-mzansi-light"}`}>
 
             {/* Navigation Frame */}
-            <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-6 bg-mzansi-dark/95 backdrop-blur-md border-b border-mzansi-muted/20">
-                <a href="/" className="text-3xl font-extrabold tracking-tighter text-mzansi-orange hover:text-mzansi-light transition-colors">ms.</a>
-                <div className="flex items-center gap-2 cursor-pointer group">
-                    <span className="text-xs uppercase tracking-widest font-bold text-mzansi-light group-hover:text-mzansi-orange transition-colors">Menu</span>
-                    <div className="w-8 h-[2px] bg-mzansi-muted group-hover:bg-mzansi-orange transition-colors relative">
-                        <div className="absolute top-2 w-6 right-0 h-[2px] bg-mzansi-muted group-hover:bg-mzansi-orange transition-colors"></div>
+            <div className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-6 backdrop-blur-md border-b transition-colors duration-500
+                ${isDark ? "bg-mzansi-dark/95 border-mzansi-muted/20" : "bg-mzansi-light/95 border-mzansi-muted/10"}`}>
+                <a href="/" className="text-3xl font-extrabold tracking-tighter text-mzansi-orange hover:opacity-80 transition-opacity">ms.</a>
+
+                <div className="flex items-center gap-8">
+                    {/* Theme Toggle Switch */}
+                    <label className="switch">
+                        <input
+                            type="checkbox"
+                            checked={!isDark}
+                            onChange={() => setTheme(isDark ? "light" : "dark")}
+                        />
+                        <span className="slider"></span>
+                    </label>
+
+                    <div className="flex items-center gap-3 cursor-pointer group">
+                        <span className={`text-xs uppercase tracking-widest font-bold transition-colors
+                            ${isDark ? "text-mzansi-light group-hover:text-mzansi-orange" : "text-mzansi-dark group-hover:text-mzansi-orange"}`}>
+                            Menu
+                        </span>
+                        <div className={`w-8 h-[2px] relative transition-colors
+                            ${isDark ? "bg-mzansi-muted group-hover:bg-mzansi-orange" : "bg-mzansi-dark group-hover:bg-mzansi-orange"}`}>
+                            <div className={`absolute top-2 w-6 right-0 h-[2px] transition-colors
+                                ${isDark ? "bg-mzansi-muted group-hover:bg-mzansi-orange" : "bg-mzansi-dark group-hover:bg-mzansi-orange"}`}></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -59,18 +84,21 @@ export default function Home() {
                 {/* Banner Section */}
                 <section className="relative min-h-[90vh] flex flex-col justify-center px-8 pt-32 pb-16">
                     <div className="max-w-6xl mx-auto w-full relative z-10">
-                        <h1 className="text-6xl md:text-8xl lg:text-[7rem] font-black leading-none tracking-tight mb-8 text-mzansi-light">
+                        <h1 className={`text-6xl md:text-8xl lg:text-[7rem] font-black leading-none tracking-tight mb-8 transition-colors
+                            ${isDark ? "text-mzansi-light" : "text-mzansi-dark"}`}>
                             Mzansi-Speak <br />
-                            <span className="font-light text-mzansi-muted block mt-4">TTS Catalyst.</span>
+                            <span className={`font-light block mt-4 transition-colors ${isDark ? "text-mzansi-muted" : "text-mzansi-muted"}`}>TTS Catalyst.</span>
                         </h1>
                         <div className="flex flex-col md:flex-row gap-12 mt-16 max-w-4xl">
-                            <p className="text-xl md:text-2xl text-mzansi-light/70 font-light leading-relaxed flex-1">
+                            <p className={`text-xl md:text-2xl font-light leading-relaxed flex-1 transition-colors
+                                ${isDark ? "text-mzansi-light/70" : "text-mzansi-dark/70"}`}>
                                 By harnessing the power of cutting-edge AI and striking graphic design, we can transform creative ideas into impactful audio experiences.
                             </p>
                             <div className="flex-1 flex items-end">
                                 <a href="#playground" className="inline-flex items-center gap-4 group">
                                     <span className="text-sm font-bold uppercase tracking-[0.2em] text-mzansi-orange group-hover:text-mzansi-red transition-colors">Scroll to App</span>
-                                    <div className="w-12 h-12 rounded-full border border-mzansi-orange flex items-center justify-center group-hover:bg-mzansi-orange group-hover:text-mzansi-dark transition-all">
+                                    <div className={`w-12 h-12 rounded-full border border-mzansi-orange flex items-center justify-center transition-all
+                                        ${isDark ? "group-hover:bg-mzansi-orange group-hover:text-mzansi-dark" : "group-hover:bg-mzansi-orange group-hover:text-mzansi-light"}`}>
                                         ↓
                                     </div>
                                 </a>
@@ -80,13 +108,14 @@ export default function Home() {
                 </section>
 
                 {/* Application Section */}
-                <section id="playground" className="bg-[#241314] px-8 py-32 border-t border-mzansi-muted/10 relative">
+                <section id="playground" className={`px-8 py-32 border-t relative transition-colors duration-500
+                    ${isDark ? "bg-[#0a0a0a] border-mzansi-muted/10" : "bg-[#fcfcfc] border-mzansi-muted/10"}`}>
                     <div className="max-w-4xl mx-auto w-full">
                         <div className="mb-24">
                             <span className="block text-sm font-bold uppercase tracking-[0.3em] text-mzansi-muted mb-8 relative pl-12 before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-8 before:h-[2px] before:bg-mzansi-orange">
                                 Interaction
                             </span>
-                            <h2 className="text-5xl md:text-6xl font-bold mb-6 text-mzansi-light">
+                            <h2 className={`text-5xl md:text-6xl font-bold mb-6 transition-colors ${isDark ? "text-mzansi-light" : "text-mzansi-dark"}`}>
                                 Unique <span className="font-light text-mzansi-muted">Voices</span> <br />
                                 For Your <span className="font-light text-mzansi-muted">Business.</span>
                             </h2>
@@ -98,7 +127,9 @@ export default function Home() {
                                     value={text}
                                     onChange={(e) => setText(e.target.value)}
                                     placeholder="Type your script here..."
-                                    className="w-full h-40 bg-transparent border-b-2 border-mzansi-muted/30 pb-4 text-2xl text-mzansi-light placeholder:text-mzansi-muted/50 focus:border-mzansi-orange outline-none transition-colors resize-none hover:border-mzansi-muted/60"
+                                    className={`w-full h-40 bg-transparent border-b-2 pb-4 text-2xl outline-none transition-colors resize-none 
+                                        ${isDark ? "text-mzansi-light border-mzansi-muted/30 placeholder:text-mzansi-muted/50 focus:border-mzansi-orange hover:border-mzansi-muted/60"
+                                            : "text-mzansi-dark border-mzansi-dark/20 placeholder:text-mzansi-dark/40 focus:border-mzansi-orange hover:border-mzansi-dark/40"}`}
                                 />
                             </div>
 
@@ -109,7 +140,9 @@ export default function Home() {
                                         <select
                                             value={voice}
                                             onChange={(e) => setVoice(e.target.value)}
-                                            className="w-full bg-[#1c0f10] border-2 border-mzansi-muted/20 text-mzansi-light rounded-none px-6 py-5 text-lg outline-none focus:border-mzansi-orange cursor-pointer appearance-none hover:border-mzansi-muted/40 transition-colors"
+                                            className={`w-full rounded-none px-6 py-5 text-lg outline-none cursor-pointer appearance-none transition-colors border-2 focus:border-mzansi-orange
+                                                ${isDark ? "bg-mzansi-dark border-mzansi-muted/20 text-mzansi-light hover:border-mzansi-muted/40"
+                                                    : "bg-mzansi-light border-mzansi-dark/10 text-mzansi-dark hover:border-mzansi-dark/30"}`}
                                         >
                                             <option value="za_male_1">Thabo (Male)</option>
                                             <option value="za_female_1">Zanele (Female)</option>
@@ -121,7 +154,7 @@ export default function Home() {
                                 <button
                                     onClick={handleGenerate}
                                     disabled={loading || !text.trim()}
-                                    className="group relative w-full md:w-1/2 inline-flex items-center justify-between px-8 py-5 bg-mzansi-orange text-mzansi-dark overflow-hidden transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-mzansi-red hover:text-mzansi-light"
+                                    className="group relative w-full md:w-1/2 inline-flex items-center justify-between px-8 py-5 bg-mzansi-orange text-mzansi-light hover:text-mzansi-light overflow-hidden transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-mzansi-red"
                                 >
                                     <span className="relative z-10 text-sm font-black uppercase tracking-[0.2em]">
                                         {loading ? "Processing..." : "Generate Audio"}
@@ -131,8 +164,9 @@ export default function Home() {
                             </div>
 
                             {audioUrl && (
-                                <div className="mt-16 p-10 bg-mzansi-dark border border-mzansi-muted/20 relative before:content-[''] before:absolute before:top-0 before:left-0 before:w-1 before:h-full before:bg-mzansi-orange animate-in slide-in-from-bottom-8 fade-in duration-700">
-                                    <h5 className="text-xl font-bold mb-2 text-mzansi-light">Generated Result</h5>
+                                <div className={`mt-16 p-10 relative before:content-[''] before:absolute before:top-0 before:left-0 before:w-1 before:h-full before:bg-mzansi-orange animate-in slide-in-from-bottom-8 fade-in duration-700
+                                    ${isDark ? "bg-mzansi-dark border border-mzansi-muted/20" : "bg-mzansi-light border border-mzansi-dark/10 shadow-lg"}`}>
+                                    <h5 className={`text-xl font-bold mb-2 ${isDark ? "text-mzansi-light" : "text-mzansi-dark"}`}>Generated Result</h5>
                                     <p className="text-sm font-bold uppercase tracking-[0.2em] text-mzansi-muted mb-8">Audible File</p>
                                     <audio ref={audioRef} src={audioUrl} controls className="w-full outline-none" />
                                 </div>
@@ -143,13 +177,15 @@ export default function Home() {
             </main>
 
             {/* Footer */}
-            <footer className="px-8 py-16 bg-mzansi-dark border-t border-mzansi-muted/20">
+            <footer className={`px-8 py-16 border-t transition-colors duration-500
+                ${isDark ? "bg-mzansi-dark border-mzansi-muted/20" : "bg-mzansi-light border-mzansi-dark/10"}`}>
                 <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
                     <div className="text-2xl font-bold tracking-widest text-mzansi-muted">ms.</div>
                     <p className="text-sm font-bold uppercase tracking-[0.2em] text-mzansi-muted/70">
                         © 2026 Mzansi-Speak South Africa
                     </p>
-                    <ul className="flex gap-8 text-sm font-bold uppercase tracking-[0.2em] text-mzansi-light/70">
+                    <ul className={`flex gap-8 text-sm font-bold uppercase tracking-[0.2em] 
+                        ${isDark ? "text-mzansi-light/70" : "text-mzansi-dark/70"}`}>
                         <li><a href="#" className="hover:text-mzansi-orange transition-colors">Privacy</a></li>
                         <li><a href="#" className="hover:text-mzansi-orange transition-colors">Terms</a></li>
                     </ul>
