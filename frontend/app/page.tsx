@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 const VOICES = [
     { value: "za_male_1", label: "Thabo (Male)" },
@@ -13,31 +13,13 @@ export default function Home() {
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
-    const [isDark, setIsDark] = useState(true);
+    const [theme, setTheme] = useState<"dark" | "light">("dark");
     const audioRef = useRef<HTMLAudioElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
-    // Apply CSS variables directly to :root — foolproof, cache-proof theming
-    useEffect(() => {
-        const root = document.documentElement;
-        if (isDark) {
-            root.style.setProperty("--bg", "#1c1c1c");
-            root.style.setProperty("--fg", "#f2f2f2");
-            root.style.setProperty("--fg-soft", "rgba(242,242,242,0.6)");
-            root.style.setProperty("--section-bg", "#161616");
-            root.style.setProperty("--border", "rgba(140,140,140,0.18)");
-            root.style.setProperty("--input-border", "rgba(140,140,140,0.3)");
-            root.style.setProperty("--input-border-hover", "rgba(255,152,0,0.7)");
-        } else {
-            root.style.setProperty("--bg", "#f2f2f2");
-            root.style.setProperty("--fg", "#1c1c1c");
-            root.style.setProperty("--fg-soft", "rgba(28,28,28,0.6)");
-            root.style.setProperty("--section-bg", "#e8e8e8");
-            root.style.setProperty("--border", "rgba(28,28,28,0.12)");
-            root.style.setProperty("--input-border", "rgba(28,28,28,0.25)");
-            root.style.setProperty("--input-border-hover", "rgba(255,152,0,0.9)");
-        }
-    }, [isDark]);
+    const toggleTheme = useCallback(() => {
+        setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+    }, []);
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -74,18 +56,15 @@ export default function Home() {
     };
 
     return (
-        <div id="top" className="page-root">
+        <div id="top" className="page-root" data-theme={theme}>
             {/* Navigation */}
             <nav className="navbar">
                 <a href="#top" className="logo">ms.</a>
-                <label className="switch">
-                    <input
-                        type="checkbox"
-                        checked={isDark}
-                        onChange={() => setIsDark(!isDark)}
-                    />
-                    <span className="slider"></span>
-                </label>
+                <button type="button" className="theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
+                    <span className="toggle-track">
+                        <span className="toggle-thumb" />
+                    </span>
+                </button>
             </nav>
 
             <main>

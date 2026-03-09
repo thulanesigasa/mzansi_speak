@@ -2,24 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+    scroll-behavior: smooth;
+}
+
 /* ============================================
-   CSS CUSTOM PROPERTIES (set by JS on :root)
+   DARK THEME (DEFAULT)
    ============================================ */
-:root {
+.page-root {
     --bg: #1c1c1c;
     --fg: #f2f2f2;
     --fg-soft: rgba(242, 242, 242, 0.6);
     --section-bg: #161616;
     --border: rgba(140, 140, 140, 0.18);
     --input-border: rgba(140, 140, 140, 0.3);
-    --input-border-hover: rgba(255, 152, 0, 0.7);
     --orange: #ff9800;
     --orange-dark: #e68a00;
     --muted: #8c8c8c;
 }
 
-html {
-    scroll-behavior: smooth;
+/* ============================================
+   LIGHT THEME OVERRIDE
+   ============================================ */
+.page-root[data-theme="light"] {
+    --bg: #f2f2f2;
+    --fg: #1c1c1c;
+    --fg-soft: rgba(28, 28, 28, 0.6);
+    --section-bg: #e8e8e8;
+    --border: rgba(28, 28, 28, 0.12);
+    --input-border: rgba(28, 28, 28, 0.25);
 }
 
 /* ============================================
@@ -67,58 +78,62 @@ html {
 }
 
 /* ============================================
-   TOGGLE SWITCH (Uiverse.io - site-colored)
+   CUSTOM TOGGLE BUTTON (no checkbox)
    ============================================ */
-.switch {
-    display: block;
-    --width-of-switch: 3.5em;
-    --height-of-switch: 2em;
-    --size-of-icon: 1.4em;
-    --slider-offset: 0.3em;
+.theme-toggle {
     position: relative;
-    width: var(--width-of-switch);
-    height: var(--height-of-switch);
-}
-
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: absolute;
+    width: 3.5em;
+    height: 2em;
+    border: none;
+    background: transparent;
     cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--muted);
-    transition: 0.4s;
-    border-radius: 30px;
+    padding: 0;
 }
 
-.slider:before {
+.toggle-track {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 30px;
+    background-color: var(--muted);
+    position: relative;
+    transition: background-color 0.4s;
+    pointer-events: none;
+}
+
+.toggle-thumb {
     position: absolute;
-    content: "";
-    height: var(--size-of-icon, 1.4em);
-    width: var(--size-of-icon, 1.4em);
-    border-radius: 20px;
-    left: var(--slider-offset, 0.3em);
+    width: 1.4em;
+    height: 1.4em;
+    border-radius: 50%;
     top: 50%;
+    left: 0.3em;
     transform: translateY(-50%);
     background: #f2f2f2;
-    transition: 0.4s;
+    transition: left 0.4s, background 0.4s, box-shadow 0.4s;
+    pointer-events: none;
 }
 
-input:checked+.slider {
-    background-color: #1c1c1c;
+/* Dark mode toggle state */
+.page-root[data-theme="dark"] .toggle-track {
+    background-color: #111;
 }
 
-input:checked+.slider:before {
-    left: calc(100% - (var(--size-of-icon, 1.4em) + var(--slider-offset, 0.3em)));
+.page-root[data-theme="dark"] .toggle-thumb {
+    left: calc(100% - 1.7em);
     background: var(--orange);
     box-shadow: inset -3px -2px 5px -2px var(--orange-dark), inset -8px -3px 0 0 #1c1c1c;
+}
+
+/* Light mode toggle state */
+.page-root[data-theme="light"] .toggle-track {
+    background-color: var(--muted);
+}
+
+.page-root[data-theme="light"] .toggle-thumb {
+    left: 0.3em;
+    background: #f2f2f2;
+    box-shadow: none;
 }
 
 /* ============================================
