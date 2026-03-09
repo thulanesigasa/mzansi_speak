@@ -46,14 +46,14 @@ export default function Home() {
     const isDark = theme === "dark";
 
     return (
-        <div className={`min-h-screen font-sans overflow-x-hidden relative transition-colors duration-500
+        <div id="top" className={`min-h-screen font-sans overflow-x-hidden relative transition-colors duration-500
             ${isDark ? "bg-mzansi-dark text-mzansi-light selection:bg-mzansi-orange selection:text-mzansi-dark"
                 : "bg-mzansi-light text-mzansi-dark selection:bg-mzansi-muted selection:text-mzansi-light"}`}>
 
             {/* Navigation Frame */}
             <div className={`fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-8 py-6 backdrop-blur-md border-b transition-colors duration-500
                 ${isDark ? "bg-mzansi-dark/95 border-mzansi-muted/20" : "bg-mzansi-light/95 border-mzansi-muted/10"}`}>
-                <a href="/" className="text-3xl font-extrabold tracking-tighter text-mzansi-orange hover:opacity-80 transition-opacity">ms.</a>
+                <a href="#top" className="text-3xl font-extrabold tracking-tighter text-mzansi-orange hover:opacity-80 transition-opacity">ms.</a>
 
                 <div className="flex items-center gap-8">
                     {/* Theme Toggle Switch */}
@@ -65,18 +65,6 @@ export default function Home() {
                         />
                         <span className="slider"></span>
                     </label>
-
-                    <div className="flex items-center gap-3 cursor-pointer group">
-                        <span className={`text-xs uppercase tracking-widest font-bold transition-colors
-                            ${isDark ? "text-mzansi-light group-hover:text-mzansi-orange" : "text-mzansi-dark group-hover:text-mzansi-orange"}`}>
-                            Menu
-                        </span>
-                        <div className={`w-8 h-[2px] relative transition-colors
-                            ${isDark ? "bg-mzansi-muted group-hover:bg-mzansi-orange" : "bg-mzansi-dark group-hover:bg-mzansi-orange"}`}>
-                            <div className={`absolute top-2 w-6 right-0 h-[2px] transition-colors
-                                ${isDark ? "bg-mzansi-muted group-hover:bg-mzansi-orange" : "bg-mzansi-dark group-hover:bg-mzansi-orange"}`}></div>
-                        </div>
-                    </div>
                 </div>
             </div>
 
@@ -109,7 +97,7 @@ export default function Home() {
 
                 {/* Application Section */}
                 <section id="playground" className={`px-8 py-32 border-t relative transition-colors duration-500
-                    ${isDark ? "bg-[#0a0a0a] border-mzansi-muted/10" : "bg-[#fcfcfc] border-mzansi-muted/10"}`}>
+                    ${isDark ? "bg-black/20 border-mzansi-muted/10" : "bg-white/40 border-mzansi-dark/10"}`}>
                     <div className="max-w-4xl mx-auto w-full">
                         <div className="mb-24">
                             <span className="block text-sm font-bold uppercase tracking-[0.3em] text-mzansi-muted mb-8 relative pl-12 before:content-[''] before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:w-8 before:h-[2px] before:bg-mzansi-orange">
