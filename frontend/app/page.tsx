@@ -60,7 +60,7 @@ export default function Home() {
                     <label className="switch">
                         <input
                             type="checkbox"
-                            checked={!isDark}
+                            checked={isDark}
                             onChange={() => setTheme(isDark ? "light" : "dark")}
                         />
                         <span className="slider"></span>

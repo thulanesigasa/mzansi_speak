@@ -8,11 +8,11 @@ const config: Config = {
         extend: {
             colors: {
                 mzansi: {
-                    dark: "#2A1617",
-                    muted: "#7A4B47",
-                    light: "#FFFB97",
-                    orange: "#FE7F42",
-                    red: "#B32C1A"
+                    dark: "#1c1c1c", /* PTechSolutions Dark */
+                    muted: "#8c8c8c", /* PTechSolutions Grey/Text */
+                    light: "#f2f2f2", /* PTechSolutions Light Background */
+                    orange: "#ff9800", /* PTechSolutions Accent */
+                    red: "#e68a00"
                 }
             }
         },
