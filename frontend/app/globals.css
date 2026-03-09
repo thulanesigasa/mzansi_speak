@@ -36,7 +36,8 @@ html {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #f4f4f5;
+    background-color: #8c8c8c;
+    /* mzansi-muted - unchecked/light state */
     transition: .4s;
     border-radius: 30px;
 }
@@ -50,17 +51,19 @@ html {
     left: var(--slider-offset, 0.3em);
     top: 50%;
     transform: translateY(-50%);
-    background: linear-gradient(40deg, #ff0080, #ff8c00 70%);
+    background: #f2f2f2;
+    /* mzansi-light - sun icon */
     transition: .4s;
 }
 
 input:checked+.slider {
-    background-color: #303136;
+    background-color: #1c1c1c;
+    /* mzansi-dark - checked/dark state */
 }
 
 input:checked+.slider:before {
     left: calc(100% - (var(--size-of-icon, 1.4em) + var(--slider-offset, 0.3em)));
-    background: #303136;
-    /* change the value of second inset in box-shadow to change the angle and direction of the moon  */
-    box-shadow: inset -3px -2px 5px -2px #8983f7, inset -10px -4px 0 0 #cfd8dc;
+    background: #ff9800;
+    /* mzansi-orange - moon icon in dark mode */
+    box-shadow: inset -3px -2px 5px -2px #e68a00, inset -8px -3px 0 0 #1c1c1c;
 }

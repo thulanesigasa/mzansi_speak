@@ -165,18 +165,31 @@ export default function Home() {
             </main>
 
             {/* Footer */}
-            <footer className={`px-8 py-16 border-t transition-colors duration-500
+            <footer className={`px-8 py-12 border-t transition-colors duration-500
                 ${isDark ? "bg-mzansi-dark border-mzansi-muted/20" : "bg-mzansi-light border-mzansi-dark/10"}`}>
-                <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-                    <div className="text-2xl font-bold tracking-widest text-mzansi-muted">ms.</div>
-                    <p className="text-sm font-bold uppercase tracking-[0.2em] text-mzansi-muted/70">
-                        © 2026 Mzansi-Speak South Africa
-                    </p>
-                    <ul className={`flex gap-8 text-sm font-bold uppercase tracking-[0.2em] 
-                        ${isDark ? "text-mzansi-light/70" : "text-mzansi-dark/70"}`}>
-                        <li><a href="#" className="hover:text-mzansi-orange transition-colors">Privacy</a></li>
-                        <li><a href="#" className="hover:text-mzansi-orange transition-colors">Terms</a></li>
-                    </ul>
+                <div className="max-w-6xl mx-auto space-y-8">
+                    {/* Top row */}
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+                        <div className="text-2xl font-bold tracking-widest text-mzansi-orange">ms.</div>
+                        <p className="text-sm font-bold uppercase tracking-[0.2em] text-mzansi-muted">
+                            © 2026 Mzansi-Speak South Africa
+                        </p>
+                        <ul className={`flex gap-8 text-sm font-bold uppercase tracking-[0.2em] 
+                            ${isDark ? "text-mzansi-light/70" : "text-mzansi-dark/70"}`}>
+                            <li><a href="#" className="hover:text-mzansi-orange transition-colors">Privacy</a></li>
+                            <li><a href="#" className="hover:text-mzansi-orange transition-colors">Terms</a></li>
+                        </ul>
+                    </div>
+                    {/* Bottom row - ts.industries attribution */}
+                    <div className="flex justify-end">
+                        <p className={`text-xs uppercase tracking-[0.25em] transition-colors
+                            ${isDark ? "text-mzansi-muted/50" : "text-mzansi-dark/40"}`}>
+                            A product of{" "}
+                            <span className="text-mzansi-orange font-bold hover:opacity-80 transition-opacity cursor-pointer">
+                                ts.industries
+                            </span>
+                        </p>
+                    </div>
                 </div>
             </footer>
         </div>
