@@ -11,7 +11,7 @@ interface Voice {
     recommended_speed: number;
 }
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = "http://127.0.0.1:8000";
 
 export default function Home() {
     const [text, setText] = useState("");
@@ -42,8 +42,11 @@ export default function Home() {
     // Fetch voices from backend on mount
     useEffect(() => {
         const fetchVoices = async () => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
             try {
-                const res = await fetch(`${API_BASE}/voices`);
+                const res = await fetch(`${API_BASE}/voices`, { signal: controller.signal });
+                clearTimeout(timeoutId);
                 const data = await res.json();
                 const list: Voice[] = data.voices || [];
                 setVoices(list);
@@ -51,7 +54,8 @@ export default function Home() {
                 const defaultId = data.default_voice || "";
                 const defaultVoice = list.find((v) => v.id === defaultId) || list[0] || null;
                 setVoice(defaultVoice);
-            } catch {
+            } catch (err) {
+                console.error("Failed to fetch voices:", err);
                 // Fallback: empty list
                 setVoices([]);
                 setVoice(null);
