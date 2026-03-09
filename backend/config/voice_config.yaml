@@ -27,4 +27,4 @@ voices:
 default_voice: "za_male_1"
 engine: "kokoro-82m"
 model_file: "kokoro-v1.0.onnx"
-voices_file: "voices.bin"
+voices_file: "voices.json"

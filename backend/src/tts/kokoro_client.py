@@ -21,8 +21,7 @@ class KokoroClient:
         if not os.path.exists(model_path):
             logger.error(
                 "Model file not found at '%s'. "
-                "Download kokoro-v1.0.onnx from the Kokoro-82M HuggingFace repo "
-                "and place it in data/models/.",
+                "Download it and place it in data/models/.",
                 model_path,
             )
             return
@@ -30,7 +29,7 @@ class KokoroClient:
         if not os.path.exists(voices_path):
             logger.error(
                 "Voices file not found at '%s'. "
-                "Download voices.bin from the Kokoro-82M HuggingFace repo "
+                "Download voices.json from the kokoro-onnx repo "
                 "and place it in data/models/.",
                 voices_path,
             )

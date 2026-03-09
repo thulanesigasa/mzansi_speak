@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # Paths
 # ---------------------------------------------------------------------------
 MODEL_PATH = os.path.join("data", "models", "kokoro-v1.0.onnx")
-VOICES_PATH = os.path.join("data", "models", "voices.bin")
+VOICES_PATH = os.path.join("data", "models", "voices.json")
 CONFIG_PATH = os.path.join("config", "voice_config.yaml")
 OUTPUT_DIR = os.path.join("data", "outputs")
 
