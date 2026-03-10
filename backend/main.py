@@ -6,6 +6,8 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import re
+from spellchecker import SpellChecker
 
 from src.utils.rate_limiter import rate_limit
 from src.utils.cache import get_cache_key, check_cache, upload_audio_to_storage, track_generation
@@ -33,16 +35,22 @@ OUTPUT_DIR = os.path.join("data", "outputs")
 # Global client reference (populated at startup)
 # ---------------------------------------------------------------------------
 client: KokoroClient | None = None
+spell: SpellChecker | None = None
 
+# Custom allowed words dictionary to prevent false positives for app-specific terms
+ALLOWED_WORDS = {"mzansi", "tts", "kokoro", "ai", "api", "ok", "app"}
 
 # ---------------------------------------------------------------------------
 # Lifespan (startup / shutdown)
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global client
+    global client, spell
     logger.info("Initializing Kokoro TTS engine ...")
     client = KokoroClient(MODEL_PATH, VOICES_PATH)
+    spell = SpellChecker()
+    spell.word_frequency.load_words(ALLOWED_WORDS)
+
     if client.is_ready():
         logger.info("Kokoro TTS engine is ready.")
     else:
@@ -126,11 +134,20 @@ def generate_speech(request: TTSRequest):
     if not request.text.strip():
         raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-    if client is None or not client.is_ready():
+    if client is None or not client.is_ready() or spell is None:
         raise HTTPException(
             status_code=503,
-            detail="TTS engine is not available. Model files may be missing.",
+            detail="TTS engine or Spellchecker is not available.",
         )
+
+    # Strict English Spell Check Enforcement
+    words = re.findall(r'\b[A-Za-z]+\b', request.text)
+    misspelled = spell.unknown(words)
+    if misspelled:
+        error_msg = f"Strict English Mode: Please correct spelling errors -> {', '.join(misspelled)}"
+        logger.warning(error_msg)
+        raise HTTPException(status_code=400, detail=error_msg)
+
 
     # Fetch voice metadata to check for premium/blending
     voice_meta = _get_voice_metadata(request.voice_id)
