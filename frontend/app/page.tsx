@@ -120,8 +120,7 @@ export default function Home() {
                     },
                     ...prev
                 ]);
-            } else {
-                alert("Generation failed: " + data.message);
+                alert("Generation failed: " + (data.detail || data.message || "Unknown error"));
             }
         } catch {
             alert("Error connecting to the TTS service.");

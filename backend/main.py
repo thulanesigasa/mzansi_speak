@@ -161,7 +161,9 @@ def generate_speech(request: TTSRequest):
             lang=request.lang
         )
     else:
-        success = client.generate(request.text, request.voice_id, output_path, lang=request.lang)
+        # Use model_id if available, else fallback to voice_id
+        engine_voice_id = voice_meta.get("model_id") or request.voice_id
+        success = client.generate(request.text, engine_voice_id, output_path, lang=request.lang)
 
     if not success:
         raise HTTPException(
