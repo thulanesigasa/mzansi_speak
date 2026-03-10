@@ -237,9 +237,9 @@ export default function Home() {
                             </div>
 
                             {audioHistory.length > 0 && (
-                                <div className="history-section" style={{ marginTop: '2rem' }}>
-                                    <h4 className="suptitle" style={{ paddingLeft: 0, marginBottom: '1rem' }}>Session History</h4>
-                                    <div className="history-list" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                <div className="history-section" style={{ marginTop: '4rem', paddingTop: '3rem', borderTop: '1px solid var(--border)' }}>
+                                    <h4 className="suptitle" style={{ marginBottom: '2rem' }}>Session History</h4>
+                                    <div className="history-list" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                                         {audioHistory.map((item) => (
                                             <div key={item.cacheKey} className="audio-result" style={{ marginTop: 0 }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' }}>
