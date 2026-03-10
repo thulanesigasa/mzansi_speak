@@ -37,6 +37,17 @@ export function middleware(request: NextRequest) {
         },
     })
 
+    // MFA Enforcement for Admin/Dashboard Routes
+    const { pathname } = request.nextUrl
+    if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard')) {
+        const mfaToken = request.cookies.get('mfa_token')
+        if (!mfaToken) {
+            const loginUrl = new URL('/login', request.url)
+            loginUrl.searchParams.set('error', 'mfa_required')
+            return NextResponse.redirect(loginUrl)
+        }
+    }
+
     response.headers.set('Content-Security-Policy', cspHeader)
     response.headers.set('X-Frame-Options', 'DENY')
     response.headers.set('X-Content-Type-Options', 'nosniff')

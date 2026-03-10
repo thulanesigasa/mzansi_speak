@@ -1,27 +1,65 @@
 version: "3.9"
 
 services:
+  nginx-proxy:
+    image: owasp/modsecurity-crs:nginx
+    container_name: mzansi-waf
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    networks:
+      - public-net
+      - internal-net
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot
+    container_name: mzansi-certbot
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    command: certonly --webroot --webroot-path=/var/www/certbot --email admin@example.com --agree-tos --no-eff-email -d mzansispeak.com -d www.mzansispeak.com
+    depends_on:
+      - nginx-proxy
+
   backend:
     build: ./backend
     container_name: mzansi-backend
-    ports:
-      - "8000:8000"
     volumes:
       - ./backend/data/models:/app/data/models
       - audio-cache:/app/data/outputs
+    networks:
+      - internal-net
     restart: unless-stopped
 
   frontend:
     build: ./frontend
     container_name: mzansi-frontend
-    ports:
-      - "3000:3000"
     depends_on:
       - backend
     environment:
       - NEXT_PUBLIC_API_URL=http://backend:8000
+    networks:
+      - internal-net
     restart: unless-stopped
+
+networks:
+  public-net:
+    driver: bridge
+  internal-net:
+    internal: true
 
 volumes:
   audio-cache:
     driver: local
+  certbot-etc:
+  certbot-var:

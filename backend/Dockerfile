@@ -15,6 +15,12 @@ COPY . .
 # Create outputs directory
 RUN mkdir -p data/outputs
 
+# Create non-root user and group
+RUN groupadd -r mzansigroup && useradd -r -g mzansigroup mzansiuser
+RUN chown -R mzansiuser:mzansigroup /app
+
+USER mzansiuser
+
 EXPOSE 8000
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
