@@ -27,6 +27,8 @@ backend/data/outputs/*.wav
 backend/data/models/*.onnx
 backend/data/models/*.bin
 backend/data/models/*.json
+backend/data/models/.cache/
+backend/data/models/onnx/
 
 # OS files
 .DS_Store
