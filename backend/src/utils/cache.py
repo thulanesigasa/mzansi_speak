@@ -15,29 +15,17 @@ def get_cache_key(text: str, voice_id: str) -> str:
     content = f"{voice_id}:{text}"
     return hashlib.md5(content.encode()).hexdigest()
 
-def check_cache(cache_key: str) -> str | None:
+def check_cache(cache_key: str) -> bool:
     """
-    Check if a wav file for the given cache_key exists locally.
-    If not, attempt to download it from the Supabase mzansi-audio bucket.
+    Check if a wav file for the given cache_key exists in Supabase.
     """
-    file_path = os.path.join(OUTPUT_DIR, f"{cache_key}.wav")
-    
-    # 1. Check local output directory
-    if os.path.exists(file_path):
-        return file_path
-        
-    # 2. If missing locally, try pulling from Supabase Storage
     try:
-        response = supabase.storage.from_(BUCKET_NAME).download(f"{cache_key}.wav")
-        if response:
-            with open(file_path, "wb") as f:
-                f.write(response)
-            logger.info("Successfully downloaded %s.wav from Supabase storage.", cache_key)
-            return file_path
+        res = supabase.table("generations").select("cache_key").eq("cache_key", cache_key).execute()
+        return len(res.data) > 0
     except Exception as e:
-        logger.debug("Failed to pull %s.wav from Supabase (may not exist yet): %s", cache_key, str(e))
-        
-    return None
+        logger.error("Failed to check cache in Supabase: %s", str(e))
+        return False
+
 
 def upload_audio_to_storage(cache_key: str):
     """
@@ -53,8 +41,12 @@ def upload_audio_to_storage(cache_key: str):
                     file_options={"content-type": "audio/wav"}
                 )
             logger.info("Successfully uploaded %s.wav to Supabase storage.", cache_key)
+            # Cleanup local file to save space
+            os.remove(file_path)
+            logger.info("Deleted local file %s.wav to save disk space.", cache_key)
         except Exception as e:
             logger.error("Failed to upload %s.wav to Supabase: %s", cache_key, str(e))
+
 
 def track_generation(cache_key: str, text: str, voice_id: str, char_count: int):
     """

@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
 import re
 from spellchecker import SpellChecker
@@ -12,7 +12,7 @@ from spellchecker import SpellChecker
 from src.utils.rate_limiter import rate_limit
 from src.utils.cache import get_cache_key, check_cache, upload_audio_to_storage, track_generation
 from src.tts.kokoro_client import KokoroClient
-from src.utils.supabase_client import supabase
+from src.utils.supabase_client import supabase, url as supabase_url
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -155,6 +155,7 @@ def generate_speech(request: TTSRequest):
         raise HTTPException(status_code=404, detail=f"Voice {request.voice_id} not found")
 
     cache_key = get_cache_key(request.text, request.voice_id)
+    public_audio_url = f"{supabase_url}/storage/v1/object/public/mzansi-audio/{cache_key}.wav"
 
     # Check cache first
     cached = check_cache(cache_key)
@@ -163,7 +164,7 @@ def generate_speech(request: TTSRequest):
         return {
             "status": "success",
             "cache_key": cache_key,
-            "audio_url": f"/api/audio/{cache_key}.wav",
+            "audio_url": public_audio_url,
         }
 
     # Cache miss: generate audio
@@ -195,35 +196,19 @@ def generate_speech(request: TTSRequest):
     return {
         "status": "success",
         "cache_key": cache_key,
-        "audio_url": f"/api/audio/{cache_key}.wav",
+        "audio_url": public_audio_url,
     }
+
 
 
 @app.get("/api/audio/{filename}")
 async def get_audio(filename: str):
-    file_path = os.path.join(OUTPUT_DIR, filename)
-    
-    # If the exact file exists (e.g., .wav or .mp3 already generated)
-    if os.path.exists(file_path):
-        media_type = "audio/mpeg" if filename.endswith(".mp3") else "audio/wav"
-        return FileResponse(file_path, media_type=media_type)
-        
-    # If MP3 was requested but only WAV exists, convert it dynamically
+    """Redirect local audio requests to the Supabase public cloud bucket."""
     if filename.endswith(".mp3"):
-        wav_filename = filename[:-4] + ".wav"
-        wav_path = os.path.join(OUTPUT_DIR, wav_filename)
-        if os.path.exists(wav_path):
-            try:
-                from pydub import AudioSegment
-                logger.info(f"Converting {wav_filename} to {filename}...")
-                audio = AudioSegment.from_wav(wav_path)
-                audio.export(file_path, format="mp3", bitrate="192k")
-                return FileResponse(file_path, media_type="audio/mpeg")
-            except Exception as e:
-                logger.error(f"Failed to convert WAV to MP3: {e}")
-                raise HTTPException(status_code=500, detail="Conversion to MP3 failed.")
-
-    raise HTTPException(status_code=404, detail="Audio file not found")
+        filename = filename[:-4] + ".wav"
+        
+    public_audio_url = f"{supabase_url}/storage/v1/object/public/mzansi-audio/{filename}"
+    return RedirectResponse(url=public_audio_url)
 
 
 # ---------------------------------------------------------------------------

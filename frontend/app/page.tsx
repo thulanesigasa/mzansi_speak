@@ -109,6 +109,7 @@ export default function Home() {
         cacheKey: string;
         textSnippet: string;
         voiceName: string;
+        audioUrl: string;
     }
     const [audioHistory, setAudioHistory] = useState<AudioItem[]>([]);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -142,7 +143,8 @@ export default function Home() {
                         id: Date.now(),
                         cacheKey: data.cache_key,
                         textSnippet: text.length > 50 ? text.substring(0, 50) + "..." : text,
-                        voiceName: voice.name
+                        voiceName: voice.name,
+                        audioUrl: data.audio_url
                     },
                     ...prev
                 ]);
@@ -156,23 +158,21 @@ export default function Home() {
         }
     };
 
-    const handleDownload = async (cacheKey: string, format: "wav" | "mp3") => {
-        const url = `${API_BASE}/api/audio/${cacheKey}.${format}`;
+    const handleDownload = async (audioUrl: string, cacheKey: string) => {
         try {
-            const res = await fetch(url);
+            const res = await fetch(audioUrl);
             if (!res.ok) throw new Error("Failed to download");
             const blob = await res.blob();
             const downloadUrl = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = downloadUrl;
-            a.download = `mzansi-speak-${cacheKey}.${format}`;
+            a.download = `mzansi_speak_${cacheKey}.wav`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(downloadUrl);
-        } catch (e) {
-            console.error("Download error:", e);
-            alert("Could not download audio.");
+        } catch {
+            setErrorMessage("Failed to download audio track.");
         }
     };
 
@@ -325,21 +325,14 @@ export default function Home() {
                                                 />
 
                                                 <div className="download-actions">
-                                                    <p className="download-label">Download Audio As:</p>
+                                                    <p className="download-label">Download Audio:</p>
                                                     <div className="download-buttons">
                                                         <button
                                                             className="dl-btn"
-                                                            onClick={() => handleDownload(item.cacheKey, "wav")}
-                                                            aria-label="Download WAV"
+                                                            onClick={() => handleDownload(item.audioUrl, item.cacheKey)}
+                                                            aria-label="Download Audio"
                                                         >
-                                                            WAV (Lossless)
-                                                        </button>
-                                                        <button
-                                                            className="dl-btn"
-                                                            onClick={() => handleDownload(item.cacheKey, "mp3")}
-                                                            aria-label="Download MP3"
-                                                        >
-                                                            MP3 (Compressed)
+                                                            Download Lossless Audio
                                                         </button>
                                                     </div>
                                                 </div>
