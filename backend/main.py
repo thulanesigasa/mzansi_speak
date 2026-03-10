@@ -4,13 +4,15 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
+import re
+from spellchecker import SpellChecker
 
 from src.utils.rate_limiter import rate_limit
 from src.utils.cache import get_cache_key, check_cache, upload_audio_to_storage, track_generation
 from src.tts.kokoro_client import KokoroClient
-from src.utils.supabase_client import supabase
+from src.utils.supabase_client import supabase, url as supabase_url
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -33,16 +35,22 @@ OUTPUT_DIR = os.path.join("data", "outputs")
 # Global client reference (populated at startup)
 # ---------------------------------------------------------------------------
 client: KokoroClient | None = None
+spell: SpellChecker | None = None
 
+# Custom allowed words dictionary to prevent false positives for app-specific terms
+ALLOWED_WORDS = {"mzansi", "tts", "kokoro", "ai", "api", "ok", "app"}
 
 # ---------------------------------------------------------------------------
 # Lifespan (startup / shutdown)
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global client
+    global client, spell
     logger.info("Initializing Kokoro TTS engine ...")
     client = KokoroClient(MODEL_PATH, VOICES_PATH)
+    spell = SpellChecker()
+    spell.word_frequency.load_words(ALLOWED_WORDS)
+
     if client.is_ready():
         logger.info("Kokoro TTS engine is ready.")
     else:
@@ -74,6 +82,7 @@ app.add_middleware(
 class TTSRequest(BaseModel):
     text: str
     voice_id: str
+    lang: str = "en-us"
 
 
 # ---------------------------------------------------------------------------
@@ -88,6 +97,15 @@ def _fetch_voices_from_db() -> list:
         logger.error("Failed to fetch voices from Supabase: %s", str(e))
         return []
 
+def _get_voice_metadata(voice_id: str) -> dict | None:
+    """Fetch specific voice metadata from Supabase."""
+    try:
+        response = supabase.table("voices").select("*").eq("id", voice_id).execute()
+        return response.data[0] if response.data else None
+    except Exception as e:
+        logger.error("Failed to fetch voice metadata: %s", str(e))
+        return None
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -101,10 +119,9 @@ async def list_voices():
     """Return the list of available voices from Supabase table."""
     voices = _fetch_voices_from_db()
     
-    # Optional logic to pick a default voice dynamically
-    default_voice = "za_male_1"
+    default_voice = "am_adam"
     if voices:
-        default_voice = voices[0].get("id", "za_male_1")
+        default_voice = voices[0].get("id", "am_adam")
         
     return {
         "voices": voices,
@@ -113,17 +130,32 @@ async def list_voices():
 
 
 @app.post("/generate", dependencies=[Depends(rate_limit)])
-async def generate_speech(request: TTSRequest):
+def generate_speech(request: TTSRequest):
     if not request.text.strip():
         raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-    if client is None or not client.is_ready():
+    if client is None or not client.is_ready() or spell is None:
         raise HTTPException(
             status_code=503,
-            detail="TTS engine is not available. Model files may be missing.",
+            detail="TTS engine or Spellchecker is not available.",
         )
 
+    # Strict English Spell Check Enforcement
+    words = re.findall(r'\b[A-Za-z]+\b', request.text)
+    misspelled = spell.unknown(words)
+    if misspelled:
+        error_msg = f"Strict English Mode: Please correct spelling errors -> {', '.join(misspelled)}"
+        logger.warning(error_msg)
+        raise HTTPException(status_code=400, detail=error_msg)
+
+
+    # Fetch voice metadata to check for premium/blending
+    voice_meta = _get_voice_metadata(request.voice_id)
+    if not voice_meta:
+        raise HTTPException(status_code=404, detail=f"Voice {request.voice_id} not found")
+
     cache_key = get_cache_key(request.text, request.voice_id)
+    public_audio_url = f"{supabase_url}/storage/v1/object/public/mzansi-audio/{cache_key}.wav"
 
     # Check cache first
     cached = check_cache(cache_key)
@@ -132,12 +164,24 @@ async def generate_speech(request: TTSRequest):
         return {
             "status": "success",
             "cache_key": cache_key,
-            "audio_url": f"/api/audio/{cache_key}.wav",
+            "audio_url": public_audio_url,
         }
 
     # Cache miss: generate audio
     output_path = os.path.join(OUTPUT_DIR, f"{cache_key}.wav")
-    success = client.generate(request.text, request.voice_id, output_path)
+    
+    # Use blending if premium and base_voices present
+    if voice_meta.get("is_premium") and voice_meta.get("base_voices"):
+        success = client.generate_blended(
+            request.text, 
+            voice_meta["base_voices"], 
+            output_path, 
+            lang=request.lang
+        )
+    else:
+        # Use model_id if available, else fallback to voice_id
+        engine_voice_id = voice_meta.get("model_id") or request.voice_id
+        success = client.generate(request.text, engine_voice_id, output_path, lang=request.lang)
 
     if not success:
         raise HTTPException(
@@ -152,35 +196,19 @@ async def generate_speech(request: TTSRequest):
     return {
         "status": "success",
         "cache_key": cache_key,
-        "audio_url": f"/api/audio/{cache_key}.wav",
+        "audio_url": public_audio_url,
     }
+
 
 
 @app.get("/api/audio/{filename}")
 async def get_audio(filename: str):
-    file_path = os.path.join(OUTPUT_DIR, filename)
-    
-    # If the exact file exists (e.g., .wav or .mp3 already generated)
-    if os.path.exists(file_path):
-        media_type = "audio/mpeg" if filename.endswith(".mp3") else "audio/wav"
-        return FileResponse(file_path, media_type=media_type)
-        
-    # If MP3 was requested but only WAV exists, convert it dynamically
+    """Redirect local audio requests to the Supabase public cloud bucket."""
     if filename.endswith(".mp3"):
-        wav_filename = filename[:-4] + ".wav"
-        wav_path = os.path.join(OUTPUT_DIR, wav_filename)
-        if os.path.exists(wav_path):
-            try:
-                from pydub import AudioSegment
-                logger.info(f"Converting {wav_filename} to {filename}...")
-                audio = AudioSegment.from_wav(wav_path)
-                audio.export(file_path, format="mp3", bitrate="192k")
-                return FileResponse(file_path, media_type="audio/mpeg")
-            except Exception as e:
-                logger.error(f"Failed to convert WAV to MP3: {e}")
-                raise HTTPException(status_code=500, detail="Conversion to MP3 failed.")
-
-    raise HTTPException(status_code=404, detail="Audio file not found")
+        filename = filename[:-4] + ".wav"
+        
+    public_audio_url = f"{supabase_url}/storage/v1/object/public/mzansi-audio/{filename}"
+    return RedirectResponse(url=public_audio_url)
 
 
 # ---------------------------------------------------------------------------

@@ -20,14 +20,7 @@ CREATE TABLE IF NOT EXISTS public.voices (
     recommended_speed NUMERIC DEFAULT 1.0
 );
 
--- ---------------------------------------------------------------------------
--- 2. Seed Initial Voice Data
--- ---------------------------------------------------------------------------
-INSERT INTO public.voices (id, name, gender, accent_region, description)
-VALUES 
-    ('za_male_1', 'Jabulani', 'Male', 'South Africa', 'A deep and confident South African male accent'),
-    ('za_female_1', 'Thandiwe', 'Female', 'South Africa', 'A warm and clear South African female accent')
-ON CONFLICT (id) DO NOTHING;
+-- Voices are seeded via seed_voices.sql
 
 -- ---------------------------------------------------------------------------
 -- 3. Create Storage Bucket
@@ -45,13 +38,12 @@ ALTER TABLE public.generations ENABLE ROW LEVEL SECURITY;
 -- Storage Bucket Policies: mzansi-audio
 -- ---------------------------------------------------------------------------
 
--- Policy: Allow users to insert their own audio files
-CREATE POLICY "Users can upload their own audio"
+-- Policy: Allow users/backend to insert audio files
+CREATE POLICY "Public can upload audio"
 ON storage.objects FOR INSERT
-TO authenticated
+TO public
 WITH CHECK (
-    bucket_id = 'mzansi-audio' AND 
-    auth.uid() = owner
+    bucket_id = 'mzansi-audio'
 );
 
 -- Policy: Allow users to select/read only their own audio files

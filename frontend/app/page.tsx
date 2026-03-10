@@ -10,6 +10,9 @@ interface Voice {
     accent_region: string;
     description: string;
     recommended_speed: number;
+    language: string;
+    is_premium?: boolean;
+    base_voices?: Record<string, number>;
 }
 
 const API_BASE = "http://localhost:8000";
@@ -23,8 +26,11 @@ export default function Home() {
     const [loading, setLoading] = useState(false);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [theme, setTheme] = useState<"dark" | "light">("dark");
+    const [selectedLanguage, setSelectedLanguage] = useState("English");
+    const [languages, setLanguages] = useState<string[]>(["English"]);
     const audioRef = useRef<HTMLAudioElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const [showBackToTop, setShowBackToTop] = useState(false);
 
     const toggleTheme = useCallback(() => {
         setTheme((prev) => {
@@ -44,20 +50,21 @@ export default function Home() {
     useEffect(() => {
         const fetchVoices = async () => {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
             try {
                 const res = await fetch(`${API_BASE}/voices`, { signal: controller.signal });
                 clearTimeout(timeoutId);
                 const data = await res.json();
                 const list: Voice[] = data.voices || [];
                 setVoices(list);
-                // Set default voice
+
+                // Set default voice (English)
+                const englishVoices = list.filter(v => (v.language || "English") === "English");
                 const defaultId = data.default_voice || "";
-                const defaultVoice = list.find((v) => v.id === defaultId) || list[0] || null;
+                const defaultVoice = englishVoices.find((v) => v.id === defaultId) || englishVoices[0] || null;
                 setVoice(defaultVoice);
             } catch (err) {
                 console.error("Failed to fetch voices:", err);
-                // Fallback: empty list
                 setVoices([]);
                 setVoice(null);
             } finally {
@@ -66,6 +73,8 @@ export default function Home() {
         };
         fetchVoices();
     }, []);
+
+    const filteredVoices = voices.filter(v => (v.language || "English") === "English");
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -78,12 +87,41 @@ export default function Home() {
         return () => document.removeEventListener("mousedown", handler);
     }, []);
 
+    // Handle Back to Top visibility
+    useEffect(() => {
+        const handleScroll = () => {
+            if (window.scrollY > 300) {
+                setShowBackToTop(true);
+            } else {
+                setShowBackToTop(false);
+            }
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     interface AudioItem {
+        id: number;
         cacheKey: string;
         textSnippet: string;
         voiceName: string;
+        audioUrl: string;
     }
     const [audioHistory, setAudioHistory] = useState<AudioItem[]>([]);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+    // Auto-clear error after 10 seconds
+    useEffect(() => {
+        if (errorMessage) {
+            const timer = setTimeout(() => setErrorMessage(null), 10000);
+            return () => clearTimeout(timer);
+        }
+    }, [errorMessage]);
+
 
     const handleGenerate = async () => {
         if (!text.trim() || !voice) return;
@@ -92,45 +130,49 @@ export default function Home() {
             const response = await fetch(`${API_BASE}/generate`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text, voice_id: voice.id }),
+                body: JSON.stringify({
+                    text,
+                    voice_id: voice.id,
+                    lang: "en-us" // Strictly English now
+                }),
             });
             const data = await response.json();
-            if (data.status === "success") {
+            if (data.status === "success" || response.ok) {
                 setAudioHistory((prev) => [
                     {
+                        id: Date.now(),
                         cacheKey: data.cache_key,
                         textSnippet: text.length > 50 ? text.substring(0, 50) + "..." : text,
-                        voiceName: voice.name
+                        voiceName: voice.name,
+                        audioUrl: data.audio_url
                     },
                     ...prev
                 ]);
             } else {
-                alert("Generation failed: " + data.message);
+                setErrorMessage("Generation failed: " + (data.detail || data.message || "Unknown error"));
             }
         } catch {
-            alert("Error connecting to the TTS service.");
+            setErrorMessage("Error connecting to the TTS service.");
         } finally {
             setLoading(false);
         }
     };
 
-    const handleDownload = async (cacheKey: string, format: "wav" | "mp3") => {
-        const url = `${API_BASE}/api/audio/${cacheKey}.${format}`;
+    const handleDownload = async (audioUrl: string, cacheKey: string) => {
         try {
-            const res = await fetch(url);
+            const res = await fetch(audioUrl);
             if (!res.ok) throw new Error("Failed to download");
             const blob = await res.blob();
             const downloadUrl = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = downloadUrl;
-            a.download = `mzansi-speak-${cacheKey}.${format}`;
+            a.download = `mzansi_speak_${cacheKey}.wav`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             window.URL.revokeObjectURL(downloadUrl);
-        } catch (e) {
-            console.error("Download error:", e);
-            alert("Could not download audio.");
+        } catch {
+            setErrorMessage("Failed to download audio track.");
         }
     };
 
@@ -200,8 +242,10 @@ export default function Home() {
                             <textarea
                                 value={text}
                                 onChange={(e) => setText(e.target.value)}
-                                placeholder="Type your script here..."
+                                placeholder="Type your script here. Spelling is strictly checked."
                                 className="script-input"
+                                spellCheck={true}
+                                lang="en"
                             />
 
                             <div className="controls-row">
@@ -218,17 +262,32 @@ export default function Home() {
                                         <span>{voicesLoading ? "Loading voices..." : voiceLabel}</span>
                                         <span className={`dropdown-arrow ${dropdownOpen ? "open" : ""}`}>&#9660;</span>
                                     </button>
-                                    {voices.length > 0 && (
+                                    {filteredVoices.length > 0 && (
                                         <ul className={`dropdown-list ${dropdownOpen ? "open" : ""}`} role="listbox">
-                                            {voices.map((v) => (
+                                            {filteredVoices.map((v) => (
                                                 <li
                                                     key={v.id}
                                                     role="option"
                                                     className={`dropdown-item ${voice?.id === v.id ? "active" : ""}`}
                                                     onClick={() => { setVoice(v); setDropdownOpen(false); }}
                                                 >
-                                                    <div>
-                                                        <span className="voice-name">{v.name}</span>
+                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <span className="voice-name">{v.name}</span>
+                                                            {v.is_premium && (
+                                                                <span className="premium-badge" style={{
+                                                                    fontSize: '0.6rem',
+                                                                    background: 'var(--primary)',
+                                                                    color: 'var(--bg)',
+                                                                    padding: '0.1rem 0.4rem',
+                                                                    borderRadius: '1rem',
+                                                                    fontWeight: 'bold',
+                                                                    textTransform: 'uppercase'
+                                                                }}>
+                                                                    Pro
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <span className="voice-meta">{v.gender} / {v.accent_region}</span>
                                                     </div>
                                                     {voice?.id === v.id && <span className="check">&#10003;</span>}
@@ -253,7 +312,7 @@ export default function Home() {
                                     <h4 className="suptitle" style={{ marginBottom: '2rem' }}>Session History</h4>
                                     <div className="history-list" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                                         {audioHistory.map((item) => (
-                                            <div key={item.cacheKey} className="audio-result" style={{ marginTop: 0 }}>
+                                            <div key={item.id} className="audio-result" style={{ marginTop: 0 }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' }}>
                                                     <h5 className="result-title">Voice: {item.voiceName}</h5>
                                                     <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>{item.textSnippet}</span>
@@ -266,21 +325,14 @@ export default function Home() {
                                                 />
 
                                                 <div className="download-actions">
-                                                    <p className="download-label">Download Audio As:</p>
+                                                    <p className="download-label">Download Audio:</p>
                                                     <div className="download-buttons">
                                                         <button
                                                             className="dl-btn"
-                                                            onClick={() => handleDownload(item.cacheKey, "wav")}
-                                                            aria-label="Download WAV"
+                                                            onClick={() => handleDownload(item.audioUrl, item.cacheKey)}
+                                                            aria-label="Download Audio"
                                                         >
-                                                            WAV (Lossless)
-                                                        </button>
-                                                        <button
-                                                            className="dl-btn"
-                                                            onClick={() => handleDownload(item.cacheKey, "mp3")}
-                                                            aria-label="Download MP3"
-                                                        >
-                                                            MP3 (Compressed)
+                                                            Download Lossless Audio
                                                         </button>
                                                     </div>
                                                 </div>
@@ -312,6 +364,14 @@ export default function Home() {
                     </div>
                 </div>
             </footer>
+            {/* Custom Error Toast */}
+            <div className={`error-toast ${errorMessage ? 'visible' : ''}`}>
+                <div className="error-toast-content">
+                    <div className="error-toast-icon">⚠️</div>
+                    <div className="error-toast-text">{errorMessage}</div>
+                </div>
+                <button onClick={() => setErrorMessage(null)} className="error-toast-close">&times;</button>
+            </div>
         </div>
     );
 }
