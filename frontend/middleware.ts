@@ -1,5 +1,3 @@
-// @ts-ignore
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
@@ -36,24 +34,7 @@ export async function middleware(request: NextRequest) {
         request: { headers: requestHeaders },
     })
 
-    // Supabase Auth and MFA Enforcement
-    const supabase = createMiddlewareClient({ req: request, res: response })
-    const { data: { session } } = await supabase.auth.getSession()
-
     const { pathname } = request.nextUrl
-    if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard')) {
-        if (!session) {
-            const loginUrl = new URL('/', request.url)
-            return NextResponse.redirect(loginUrl)
-        }
-
-        // MFA level check
-        const { data: amrData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
-        if (amrData && amrData.currentLevel !== amrData.nextLevel) {
-            const loginUrl = new URL('/', request.url)
-            return NextResponse.redirect(loginUrl)
-        }
-    }
 
     response.headers.set('Content-Security-Policy', cspHeader)
     response.headers.set('X-Frame-Options', 'DENY')
