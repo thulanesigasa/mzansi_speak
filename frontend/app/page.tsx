@@ -77,12 +77,16 @@ export default function Home() {
         return () => document.removeEventListener("mousedown", handler);
     }, []);
 
-    const [audioCacheKey, setAudioCacheKey] = useState<string | null>(null);
+    interface AudioItem {
+        cacheKey: string;
+        textSnippet: string;
+        voiceName: string;
+    }
+    const [audioHistory, setAudioHistory] = useState<AudioItem[]>([]);
 
     const handleGenerate = async () => {
         if (!text.trim() || !voice) return;
         setLoading(true);
-        setAudioCacheKey(null);
         try {
             const response = await fetch(`${API_BASE}/generate`, {
                 method: "POST",
@@ -91,7 +95,14 @@ export default function Home() {
             });
             const data = await response.json();
             if (data.status === "success") {
-                setAudioCacheKey(data.cache_key);
+                setAudioHistory((prev) => [
+                    {
+                        cacheKey: data.cache_key,
+                        textSnippet: text.length > 50 ? text.substring(0, 50) + "..." : text,
+                        voiceName: voice.name
+                    },
+                    ...prev
+                ]);
             } else {
                 alert("Generation failed: " + data.message);
             }
@@ -102,9 +113,8 @@ export default function Home() {
         }
     };
 
-    const handleDownload = async (format: "wav" | "mp3") => {
-        if (!audioCacheKey) return;
-        const url = `${API_BASE}/api/audio/${audioCacheKey}.${format}`;
+    const handleDownload = async (cacheKey: string, format: "wav" | "mp3") => {
+        const url = `${API_BASE}/api/audio/${cacheKey}.${format}`;
         try {
             const res = await fetch(url);
             if (!res.ok) throw new Error("Failed to download");
@@ -112,7 +122,7 @@ export default function Home() {
             const downloadUrl = window.URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = downloadUrl;
-            a.download = `mzansi-speak-${audioCacheKey}.${format}`;
+            a.download = `mzansi-speak-${cacheKey}.${format}`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -226,36 +236,44 @@ export default function Home() {
                                 </button>
                             </div>
 
-                            {audioCacheKey && (
-                                <div className="audio-result">
-                                    <h5 className="result-title">Generated Result</h5>
-                                    <p className="result-sub">Audible File</p>
-                                    <audio
-                                        ref={audioRef}
-                                        src={`${API_BASE}/api/audio/${audioCacheKey}.wav`}
-                                        controls
-                                        className="audio-player"
-                                        key={audioCacheKey}
-                                    />
+                            {audioHistory.length > 0 && (
+                                <div className="history-section" style={{ marginTop: '2rem' }}>
+                                    <h4 className="suptitle" style={{ paddingLeft: 0, marginBottom: '1rem' }}>Session History</h4>
+                                    <div className="history-list" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                        {audioHistory.map((item) => (
+                                            <div key={item.cacheKey} className="audio-result" style={{ marginTop: 0 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' }}>
+                                                    <h5 className="result-title">Voice: {item.voiceName}</h5>
+                                                    <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>{item.textSnippet}</span>
+                                                </div>
+                                                <audio
+                                                    ref={audioRef}
+                                                    src={`${API_BASE}/api/audio/${item.cacheKey}.wav`}
+                                                    controls
+                                                    className="audio-player"
+                                                />
 
-                                    <div className="download-actions">
-                                        <p className="download-label">Download Audio As:</p>
-                                        <div className="download-buttons">
-                                            <button
-                                                className="dl-btn"
-                                                onClick={() => handleDownload("wav")}
-                                                aria-label="Download WAV"
-                                            >
-                                                WAV (Lossless)
-                                            </button>
-                                            <button
-                                                className="dl-btn"
-                                                onClick={() => handleDownload("mp3")}
-                                                aria-label="Download MP3"
-                                            >
-                                                MP3 (Compressed)
-                                            </button>
-                                        </div>
+                                                <div className="download-actions">
+                                                    <p className="download-label">Download Audio As:</p>
+                                                    <div className="download-buttons">
+                                                        <button
+                                                            className="dl-btn"
+                                                            onClick={() => handleDownload(item.cacheKey, "wav")}
+                                                            aria-label="Download WAV"
+                                                        >
+                                                            WAV (Lossless)
+                                                        </button>
+                                                        <button
+                                                            className="dl-btn"
+                                                            onClick={() => handleDownload(item.cacheKey, "mp3")}
+                                                            aria-label="Download MP3"
+                                                        >
+                                                            MP3 (Compressed)
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )}
