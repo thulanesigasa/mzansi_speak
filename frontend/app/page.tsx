@@ -301,8 +301,8 @@ export default function Home() {
                         <div className="footer-logo">ms.</div>
                         <p className="footer-copy">&copy; 2026 Mzansi-Speak South Africa</p>
                         <ul className="footer-links">
-                            <li><a href="#">Privacy</a></li>
-                            <li><a href="#">Terms</a></li>
+                            <li><a href="/privacy">Privacy</a></li>
+                            <li><a href="/terms">Terms</a></li>
                         </ul>
                     </div>
                     <div className="footer-bottom">
