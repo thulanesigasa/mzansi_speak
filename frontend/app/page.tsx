@@ -30,6 +30,7 @@ export default function Home() {
     const [languages, setLanguages] = useState<string[]>(["English"]);
     const audioRef = useRef<HTMLAudioElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+    const [showBackToTop, setShowBackToTop] = useState(false);
 
     const toggleTheme = useCallback(() => {
         setTheme((prev) => {
@@ -90,6 +91,23 @@ export default function Home() {
         return () => document.removeEventListener("mousedown", handler);
     }, []);
 
+    // Handle Back to Top visibility
+    useEffect(() => {
+        const handleScroll = () => {
+            if (window.scrollY > 300) {
+                setShowBackToTop(true);
+            } else {
+                setShowBackToTop(false);
+            }
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     interface AudioItem {
         id: number;
         cacheKey: string;
@@ -112,7 +130,7 @@ export default function Home() {
                 }),
             });
             const data = await response.json();
-            if (data.status === "success") {
+            if (data.status === "success" || response.ok) {
                 setAudioHistory((prev) => [
                     {
                         id: Date.now(),
@@ -122,6 +140,7 @@ export default function Home() {
                     },
                     ...prev
                 ]);
+            } else {
                 alert("Generation failed: " + (data.detail || data.message || "Unknown error"));
             }
         } catch {
