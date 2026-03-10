@@ -150,8 +150,27 @@ async def generate_speech(request: TTSRequest):
 @app.get("/api/audio/{filename}")
 async def get_audio(filename: str):
     file_path = os.path.join(OUTPUT_DIR, filename)
+    
+    # If the exact file exists (e.g., .wav or .mp3 already generated)
     if os.path.exists(file_path):
-        return FileResponse(file_path, media_type="audio/wav")
+        media_type = "audio/mpeg" if filename.endswith(".mp3") else "audio/wav"
+        return FileResponse(file_path, media_type=media_type)
+        
+    # If MP3 was requested but only WAV exists, convert it dynamically
+    if filename.endswith(".mp3"):
+        wav_filename = filename[:-4] + ".wav"
+        wav_path = os.path.join(OUTPUT_DIR, wav_filename)
+        if os.path.exists(wav_path):
+            try:
+                from pydub import AudioSegment
+                logger.info(f"Converting {wav_filename} to {filename}...")
+                audio = AudioSegment.from_wav(wav_path)
+                audio.export(file_path, format="mp3", bitrate="192k")
+                return FileResponse(file_path, media_type="audio/mpeg")
+            except Exception as e:
+                logger.error(f"Failed to convert WAV to MP3: {e}")
+                raise HTTPException(status_code=500, detail="Conversion to MP3 failed.")
+
     raise HTTPException(status_code=404, detail="Audio file not found")
 
 

@@ -8,3 +8,4 @@ python-multipart==0.0.9
 PyYAML==6.0.1
 scipy==1.12.0
 soundfile==0.12.1
+pydub==0.25.1

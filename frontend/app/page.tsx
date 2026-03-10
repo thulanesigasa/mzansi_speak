@@ -77,10 +77,12 @@ export default function Home() {
         return () => document.removeEventListener("mousedown", handler);
     }, []);
 
+    const [audioCacheKey, setAudioCacheKey] = useState<string | null>(null);
+
     const handleGenerate = async () => {
         if (!text.trim() || !voice) return;
         setLoading(true);
-        setAudioUrl(null);
+        setAudioCacheKey(null);
         try {
             const response = await fetch(`${API_BASE}/generate`, {
                 method: "POST",
@@ -89,7 +91,7 @@ export default function Home() {
             });
             const data = await response.json();
             if (data.status === "success") {
-                setAudioUrl(`${API_BASE}/api/audio/${data.cache_key}.wav`);
+                setAudioCacheKey(data.cache_key);
             } else {
                 alert("Generation failed: " + data.message);
             }
@@ -97,6 +99,27 @@ export default function Home() {
             alert("Error connecting to the TTS service.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDownload = async (format: "wav" | "mp3") => {
+        if (!audioCacheKey) return;
+        const url = `${API_BASE}/api/audio/${audioCacheKey}.${format}`;
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("Failed to download");
+            const blob = await res.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = downloadUrl;
+            a.download = `mzansi-speak-${audioCacheKey}.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(downloadUrl);
+        } catch (e) {
+            console.error("Download error:", e);
+            alert("Could not download audio.");
         }
     };
 
@@ -203,11 +226,37 @@ export default function Home() {
                                 </button>
                             </div>
 
-                            {audioUrl && (
+                            {audioCacheKey && (
                                 <div className="audio-result">
                                     <h5 className="result-title">Generated Result</h5>
                                     <p className="result-sub">Audible File</p>
-                                    <audio ref={audioRef} src={audioUrl} controls className="audio-player" />
+                                    <audio
+                                        ref={audioRef}
+                                        src={`${API_BASE}/api/audio/${audioCacheKey}.wav`}
+                                        controls
+                                        className="audio-player"
+                                        key={audioCacheKey}
+                                    />
+
+                                    <div className="download-actions">
+                                        <p className="download-label">Download Audio As:</p>
+                                        <div className="download-buttons">
+                                            <button
+                                                className="dl-btn"
+                                                onClick={() => handleDownload("wav")}
+                                                aria-label="Download WAV"
+                                            >
+                                                WAV (Lossless)
+                                            </button>
+                                            <button
+                                                className="dl-btn"
+                                                onClick={() => handleDownload("mp3")}
+                                                aria-label="Download MP3"
+                                            >
+                                                MP3 (Compressed)
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
