@@ -20,15 +20,17 @@ __pycache__/
 .idea/
 
 # Application generated files
-backend/data/outputs/*.wav
-**/node_modules/
+backend/data/outputs/*
+!backend/data/outputs/.gitkeep
+backend/*.log
+*.log
+*.wav
+*.mp3
 
 # AI Models & Weights (Do not commit large binary/json files)
-backend/data/models/*.onnx
-backend/data/models/*.bin
-backend/data/models/*.json
-backend/data/models/.cache/
-backend/data/models/onnx/
+# Keep only the small metadata if needed, but usually models are in data/models/
+backend/data/models/*
+!backend/data/models/.gitkeep
 
 # OS files
 .DS_Store
