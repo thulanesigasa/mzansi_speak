@@ -10,6 +10,9 @@ interface Voice {
     accent_region: string;
     description: string;
     recommended_speed: number;
+    language: string;
+    is_premium?: boolean;
+    base_voices?: Record<string, number>;
 }
 
 const API_BASE = "http://localhost:8000";
@@ -23,6 +26,8 @@ export default function Home() {
     const [loading, setLoading] = useState(false);
     const [audioUrl, setAudioUrl] = useState<string | null>(null);
     const [theme, setTheme] = useState<"dark" | "light">("dark");
+    const [selectedLanguage, setSelectedLanguage] = useState("English");
+    const [languages, setLanguages] = useState<string[]>(["English"]);
     const audioRef = useRef<HTMLAudioElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -51,13 +56,18 @@ export default function Home() {
                 const data = await res.json();
                 const list: Voice[] = data.voices || [];
                 setVoices(list);
+
+                // Extract unique languages
+                const langs = Array.from(new Set(list.map(v => v.language || "English")));
+                setLanguages(langs);
+
                 // Set default voice
                 const defaultId = data.default_voice || "";
                 const defaultVoice = list.find((v) => v.id === defaultId) || list[0] || null;
                 setVoice(defaultVoice);
+                if (defaultVoice) setSelectedLanguage(defaultVoice.language || "English");
             } catch (err) {
                 console.error("Failed to fetch voices:", err);
-                // Fallback: empty list
                 setVoices([]);
                 setVoice(null);
             } finally {
@@ -66,6 +76,8 @@ export default function Home() {
         };
         fetchVoices();
     }, []);
+
+    const filteredVoices = voices.filter(v => (v.language || "English") === selectedLanguage);
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -92,7 +104,11 @@ export default function Home() {
             const response = await fetch(`${API_BASE}/generate`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text, voice_id: voice.id }),
+                body: JSON.stringify({
+                    text,
+                    voice_id: voice.id,
+                    lang: voice.language === "English" ? "en-us" : "en-gb" // Fallback phonetic mapping
+                }),
             });
             const data = await response.json();
             if (data.status === "success") {
@@ -204,6 +220,35 @@ export default function Home() {
                                 className="script-input"
                             />
 
+                            {/* Language Switcher */}
+                            <div className="language-row" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
+                                {languages.map(lang => (
+                                    <button
+                                        key={lang}
+                                        onClick={() => {
+                                            setSelectedLanguage(lang);
+                                            // Auto-select first voice in this language if current voice is different lang
+                                            const firstInLang = voices.find(v => (v.language || "English") === lang);
+                                            if (firstInLang) setVoice(firstInLang);
+                                        }}
+                                        className={`lang-tab ${selectedLanguage === lang ? "active" : ""}`}
+                                        style={{
+                                            padding: '0.5rem 1rem',
+                                            borderRadius: '2rem',
+                                            border: '1px solid var(--border)',
+                                            background: selectedLanguage === lang ? 'var(--primary)' : 'transparent',
+                                            color: selectedLanguage === lang ? 'var(--bg)' : 'var(--text)',
+                                            fontSize: '0.8rem',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                            opacity: selectedLanguage === lang ? 1 : 0.6
+                                        }}
+                                    >
+                                        {lang}
+                                    </button>
+                                ))}
+                            </div>
+
                             <div className="controls-row">
                                 {/* Custom Dropdown */}
                                 <div className="dropdown-wrap" ref={dropdownRef}>
@@ -218,17 +263,32 @@ export default function Home() {
                                         <span>{voicesLoading ? "Loading voices..." : voiceLabel}</span>
                                         <span className={`dropdown-arrow ${dropdownOpen ? "open" : ""}`}>&#9660;</span>
                                     </button>
-                                    {voices.length > 0 && (
+                                    {filteredVoices.length > 0 && (
                                         <ul className={`dropdown-list ${dropdownOpen ? "open" : ""}`} role="listbox">
-                                            {voices.map((v) => (
+                                            {filteredVoices.map((v) => (
                                                 <li
                                                     key={v.id}
                                                     role="option"
                                                     className={`dropdown-item ${voice?.id === v.id ? "active" : ""}`}
                                                     onClick={() => { setVoice(v); setDropdownOpen(false); }}
                                                 >
-                                                    <div>
-                                                        <span className="voice-name">{v.name}</span>
+                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                            <span className="voice-name">{v.name}</span>
+                                                            {v.is_premium && (
+                                                                <span className="premium-badge" style={{
+                                                                    fontSize: '0.6rem',
+                                                                    background: 'var(--primary)',
+                                                                    color: 'var(--bg)',
+                                                                    padding: '0.1rem 0.4rem',
+                                                                    borderRadius: '1rem',
+                                                                    fontWeight: 'bold',
+                                                                    textTransform: 'uppercase'
+                                                                }}>
+                                                                    Pro
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <span className="voice-meta">{v.gender} / {v.accent_region}</span>
                                                     </div>
                                                     {voice?.id === v.id && <span className="check">&#10003;</span>}
