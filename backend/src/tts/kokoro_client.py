@@ -1,6 +1,7 @@
 import os
 import logging
 import scipy.io.wavfile as wavfile
+import numpy as np
 from kokoro_onnx import Kokoro
 
 logger = logging.getLogger(__name__)
@@ -73,13 +74,18 @@ class KokoroClient:
             return False
 
         try:
-            # Average embeddings
-            # kokoro-onnx supports passing multiple voices as a list of tuples: (voice, weight)
-            blended_voice = [(v_id, weight) for v_id, weight in base_voices.items()]
+            # Fetch and average numpy embeddings
+            blended_style = None
+            for v_id, weight in base_voices.items():
+                style = self.kokoro.get_voice_style(v_id)
+                if blended_style is None:
+                    blended_style = style * weight
+                else:
+                    blended_style += style * weight
             
             samples, sample_rate = self.kokoro.create(
                 text,
-                voice=blended_voice,
+                voice=blended_style,
                 speed=1.0,
                 lang=lang,
             )

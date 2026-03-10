@@ -91,6 +91,7 @@ export default function Home() {
     }, []);
 
     interface AudioItem {
+        id: number;
         cacheKey: string;
         textSnippet: string;
         voiceName: string;
@@ -114,6 +115,7 @@ export default function Home() {
             if (data.status === "success") {
                 setAudioHistory((prev) => [
                     {
+                        id: Date.now(),
                         cacheKey: data.cache_key,
                         textSnippet: text.length > 50 ? text.substring(0, 50) + "..." : text,
                         voiceName: voice.name
@@ -312,7 +314,7 @@ export default function Home() {
                                     <h4 className="suptitle" style={{ marginBottom: '2rem' }}>Session History</h4>
                                     <div className="history-list" style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                                         {audioHistory.map((item) => (
-                                            <div key={item.cacheKey} className="audio-result" style={{ marginTop: 0 }}>
+                                            <div key={item.id} className="audio-result" style={{ marginTop: 0 }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' }}>
                                                     <h5 className="result-title">Voice: {item.voiceName}</h5>
                                                     <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>{item.textSnippet}</span>
