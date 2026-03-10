@@ -1,5 +1,44 @@
--- Enable RLS on the storage bucket and generations table
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- ---------------------------------------------------------------------------
+-- 1. Create Tables
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.generations (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    cache_key TEXT UNIQUE NOT NULL,
+    text_snippet TEXT,
+    voice_id TEXT NOT NULL,
+    char_count INTEGER NOT NULL,
+    user_id UUID REFERENCES auth.users(id)
+);
+
+CREATE TABLE IF NOT EXISTS public.voices (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    gender TEXT NOT NULL,
+    accent_region TEXT NOT NULL,
+    description TEXT,
+    recommended_speed NUMERIC DEFAULT 1.0
+);
+
+-- ---------------------------------------------------------------------------
+-- 2. Seed Initial Voice Data
+-- ---------------------------------------------------------------------------
+INSERT INTO public.voices (id, name, gender, accent_region, description)
+VALUES 
+    ('za_male_1', 'Jabulani', 'Male', 'South Africa', 'A deep and confident South African male accent'),
+    ('za_female_1', 'Thandiwe', 'Female', 'South Africa', 'A warm and clear South African female accent')
+ON CONFLICT (id) DO NOTHING;
+
+-- ---------------------------------------------------------------------------
+-- 3. Create Storage Bucket
+-- ---------------------------------------------------------------------------
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('mzansi-audio', 'mzansi-audio', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- ---------------------------------------------------------------------------
+-- 4. Enable RLS on the generations table
+-- ---------------------------------------------------------------------------
 ALTER TABLE public.generations ENABLE ROW LEVEL SECURITY;
 
 -- ---------------------------------------------------------------------------
