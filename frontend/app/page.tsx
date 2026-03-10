@@ -11,7 +11,7 @@ interface Voice {
     recommended_speed: number;
 }
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = "http://localhost:8000";
 
 export default function Home() {
     const [text, setText] = useState("");
@@ -173,8 +173,8 @@ export default function Home() {
                                         <span>{voicesLoading ? "Loading voices..." : voiceLabel}</span>
                                         <span className={`dropdown-arrow ${dropdownOpen ? "open" : ""}`}>&#9660;</span>
                                     </button>
-                                    {dropdownOpen && voices.length > 0 && (
-                                        <ul className="dropdown-list" role="listbox">
+                                    {voices.length > 0 && (
+                                        <ul className={`dropdown-list ${dropdownOpen ? "open" : ""}`} role="listbox">
                                             {voices.map((v) => (
                                                 <li
                                                     key={v.id}

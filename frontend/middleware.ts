@@ -4,20 +4,27 @@ import type { NextRequest } from 'next/server'
 export function middleware(request: NextRequest) {
     const nonce = btoa(crypto.randomUUID())
 
-    // Strict CSP Header allowing connection to localhost:8000
+    const isDev = process.env.NODE_ENV === 'development'
+
+    // In development, Next.js needs 'unsafe-eval' and 'unsafe-inline' for HMR
+    const scriptSrc = isDev
+        ? `script-src 'self' 'unsafe-eval' 'unsafe-inline'`
+        : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`
+
+    // Strict CSP Header allowing connection to backend
     const cspHeader = `
     default-src 'self';
-    script-src 'self' 'nonce-${nonce}' 'strict-dynamic';
+    ${scriptSrc};
     style-src 'self' 'unsafe-inline';
     img-src 'self' blob: data:;
     font-src 'self';
-    connect-src 'self' http://localhost:8000;
+    connect-src 'self' http://localhost:8000 http://127.0.0.1:8000;
+    media-src 'self' http://localhost:8000 http://127.0.0.1:8000;
     object-src 'none';
     base-uri 'self';
     form-action 'self';
     frame-ancestors 'none';
     block-all-mixed-content;
-    upgrade-insecure-requests;
   `.replace(/\s{2,}/g, ' ').trim()
 
     const requestHeaders = new Headers(request.headers)
