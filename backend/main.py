@@ -74,6 +74,7 @@ app.add_middleware(
 class TTSRequest(BaseModel):
     text: str
     voice_id: str
+    lang: str = "en-us"
 
 
 # ---------------------------------------------------------------------------
@@ -88,6 +89,15 @@ def _fetch_voices_from_db() -> list:
         logger.error("Failed to fetch voices from Supabase: %s", str(e))
         return []
 
+def _get_voice_metadata(voice_id: str) -> dict | None:
+    """Fetch specific voice metadata from Supabase."""
+    try:
+        response = supabase.table("voices").select("*").eq("id", voice_id).execute()
+        return response.data[0] if response.data else None
+    except Exception as e:
+        logger.error("Failed to fetch voice metadata: %s", str(e))
+        return None
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -101,10 +111,9 @@ async def list_voices():
     """Return the list of available voices from Supabase table."""
     voices = _fetch_voices_from_db()
     
-    # Optional logic to pick a default voice dynamically
-    default_voice = "za_male_1"
+    default_voice = "am_adam"
     if voices:
-        default_voice = voices[0].get("id", "za_male_1")
+        default_voice = voices[0].get("id", "am_adam")
         
     return {
         "voices": voices,
@@ -113,7 +122,7 @@ async def list_voices():
 
 
 @app.post("/generate", dependencies=[Depends(rate_limit)])
-async def generate_speech(request: TTSRequest):
+def generate_speech(request: TTSRequest):
     if not request.text.strip():
         raise HTTPException(status_code=400, detail="Text cannot be empty")
 
@@ -122,6 +131,11 @@ async def generate_speech(request: TTSRequest):
             status_code=503,
             detail="TTS engine is not available. Model files may be missing.",
         )
+
+    # Fetch voice metadata to check for premium/blending
+    voice_meta = _get_voice_metadata(request.voice_id)
+    if not voice_meta:
+        raise HTTPException(status_code=404, detail=f"Voice {request.voice_id} not found")
 
     cache_key = get_cache_key(request.text, request.voice_id)
 
@@ -137,7 +151,17 @@ async def generate_speech(request: TTSRequest):
 
     # Cache miss: generate audio
     output_path = os.path.join(OUTPUT_DIR, f"{cache_key}.wav")
-    success = client.generate(request.text, request.voice_id, output_path)
+    
+    # Use blending if premium and base_voices present
+    if voice_meta.get("is_premium") and voice_meta.get("base_voices"):
+        success = client.generate_blended(
+            request.text, 
+            voice_meta["base_voices"], 
+            output_path, 
+            lang=request.lang
+        )
+    else:
+        success = client.generate(request.text, request.voice_id, output_path, lang=request.lang)
 
     if not success:
         raise HTTPException(

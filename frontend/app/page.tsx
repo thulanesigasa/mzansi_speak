@@ -44,7 +44,7 @@ export default function Home() {
     useEffect(() => {
         const fetchVoices = async () => {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
             try {
                 const res = await fetch(`${API_BASE}/voices`, { signal: controller.signal });
                 clearTimeout(timeoutId);
