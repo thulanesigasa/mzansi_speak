@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import Image from "next/image";
+// @ts-ignore
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 interface Voice {
     id: string;
@@ -24,6 +27,67 @@ export default function Home() {
     const [theme, setTheme] = useState<"dark" | "light">("dark");
     const audioRef = useRef<HTMLAudioElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Auth & MFA State
+    const supabase = createClientComponentClient();
+    const [user, setUser] = useState<any>(null);
+    const [qrCode, setQrCode] = useState<string | null>(null);
+    const [secret, setSecret] = useState<string | null>(null);
+    const [verifyCode, setVerifyCode] = useState("");
+    const [showEnrollModal, setShowEnrollModal] = useState(false);
+
+    // Check user session
+    useEffect(() => {
+        const checkUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            setUser(session?.user || null);
+        };
+        checkUser();
+
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+            setUser(session?.user || null);
+        });
+
+        return () => {
+            authListener.subscription.unsubscribe();
+        };
+    }, [supabase]);
+
+    const handleEnrollMFA = async () => {
+        try {
+            const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
+            if (error) throw error;
+            if (data.totp.qr_code && data.id) {
+                setQrCode(data.totp.qr_code);
+                setSecret(data.id); // Storing factor_id in secret for verification
+            }
+        } catch (err) {
+            console.error("MFA Enrollment Error:", err);
+            alert("Failed to initiate MFA enrollment.");
+        }
+    };
+
+    const handleVerifyMFA = async () => {
+        if (!secret) return;
+        try {
+            const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({ factorId: secret });
+            if (challengeError) throw challengeError;
+
+            const { error: verifyError } = await supabase.auth.mfa.verify({
+                factorId: secret,
+                challengeId: challengeData.id,
+                code: verifyCode
+            });
+
+            if (verifyError) throw verifyError;
+
+            alert("MFA successfully enabled and verified!");
+            setShowEnrollModal(false);
+        } catch (err) {
+            console.error("MFA Verification Error:", err);
+            alert("Invalid verification code. Please try again.");
+        }
+    };
 
     const toggleTheme = useCallback(() => {
         setTheme((prev) => {
@@ -140,19 +204,39 @@ export default function Home() {
             {/* Navigation */}
             <nav className="navbar">
                 <a href="#top" className="logo">ms.</a>
-                <button
-                    type="button"
-                    className="theme-btn"
-                    onClick={toggleTheme}
-                    aria-label="Toggle theme"
-                >
-                    {theme === "dark" ? "\u263D" : "\u2600"}
-                </button>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    {user ? (
+                        <button className="theme-btn" style={{ fontSize: '0.9rem', width: 'auto', padding: '0 1rem' }} onClick={() => setShowEnrollModal(true)}>
+                            Admin MFA
+                        </button>
+                    ) : (
+                        <button className="theme-btn" style={{ fontSize: '0.9rem', width: 'auto', padding: '0 1rem' }} onClick={() => supabase.auth.signInWithOAuth({ provider: 'github' })}>
+                            Admin Login
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        className="theme-btn"
+                        onClick={toggleTheme}
+                        aria-label="Toggle theme"
+                    >
+                        {theme === "dark" ? "\u263D" : "\u2600"}
+                    </button>
+                </div>
             </nav>
 
             <main>
                 {/* Hero */}
                 <section className="hero">
+                    {/* Add Image for LCP Optimization */}
+                    <Image
+                        src="/hero-bg.webp"
+                        alt="Mzansi-Speak Abstract Waveform"
+                        fill
+                        priority
+                        className="hero-bg-img"
+                        style={{ objectFit: "cover", zIndex: -1, opacity: 0.15 }}
+                    />
                     <div className="hero-inner">
                         <h1 className="hero-title">
                             Mzansi-Speak
@@ -280,6 +364,41 @@ export default function Home() {
                         </div>
                     </div>
                 </section>
+
+                {showEnrollModal && (
+                    <div className="modal-overlay" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999 }}>
+                        <div className="modal-content" style={{ background: 'var(--surface)', padding: '2rem', borderRadius: '16px', maxWidth: '400px', width: '100%', border: '1px solid var(--border)' }}>
+                            <h3 style={{ marginBottom: '1rem', color: 'var(--text)' }}>Enroll MFA Endpoint</h3>
+                            <p style={{ marginBottom: '1.5rem', fontSize: '0.9rem', color: 'var(--muted)' }}>Secure your admin session with Time-Based One-Time Passwords.</p>
+
+                            {!qrCode ? (
+                                <button onClick={handleEnrollMFA} className="gen-btn" style={{ width: '100%' }}>
+                                    Start Enrollment
+                                </button>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                                    {/* The SVG is embedded directly into the src */}
+                                    <img src={qrCode} alt="TOTP QR Code" style={{ background: '#fff', padding: '1rem', borderRadius: '8px', maxWidth: '100%' }} />
+                                    <input
+                                        type="text"
+                                        placeholder="6-digit verification code"
+                                        value={verifyCode}
+                                        onChange={(e) => setVerifyCode(e.target.value)}
+                                        className="script-input"
+                                        style={{ minHeight: 'auto', padding: '0.8rem', textAlign: 'center', letterSpacing: '4px', fontSize: '1.2rem' }}
+                                    />
+                                    <button onClick={handleVerifyMFA} className="gen-btn" style={{ width: '100%' }}>
+                                        Verify & Enable
+                                    </button>
+                                </div>
+                            )}
+
+                            <button onClick={() => setShowEnrollModal(false)} style={{ marginTop: '1rem', background: 'transparent', color: 'var(--muted)', width: '100%', border: 'none', cursor: 'pointer', outline: 'none' }}>
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                )}
             </main>
 
             {/* Footer */}

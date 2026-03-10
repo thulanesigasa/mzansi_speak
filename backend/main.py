@@ -1,6 +1,5 @@
 import os
 import logging
-import yaml
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends, HTTPException
@@ -9,8 +8,9 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from src.utils.rate_limiter import rate_limit
-from src.utils.cache import get_cache_key, check_cache
+from src.utils.cache import get_cache_key, check_cache, upload_audio_to_storage, track_generation
 from src.tts.kokoro_client import KokoroClient
+from src.utils.supabase_client import supabase
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -79,14 +79,14 @@ class TTSRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-def _load_voice_config() -> dict:
-    """Read voice_config.yaml and return parsed data."""
-    if not os.path.exists(CONFIG_PATH):
-        logger.error("Voice config not found at %s", CONFIG_PATH)
-        return {"voices": [], "default_voice": "za_male_1"}
-    with open(CONFIG_PATH, "r", encoding="utf-8") as fh:
-        return yaml.safe_load(fh)
-
+def _fetch_voices_from_db() -> list:
+    """Fetch voices from Supabase PostgreSQL table."""
+    try:
+        response = supabase.table("voices").select("*").execute()
+        return response.data if response.data else []
+    except Exception as e:
+        logger.error("Failed to fetch voices from Supabase: %s", str(e))
+        return []
 
 # ---------------------------------------------------------------------------
 # Routes
@@ -98,12 +98,17 @@ async def root():
 
 @app.get("/voices")
 async def list_voices():
-    """Return the list of available voices from voice_config.yaml."""
-    config = _load_voice_config()
-    voices = config.get("voices", [])
+    """Return the list of available voices from Supabase table."""
+    voices = _fetch_voices_from_db()
+    
+    # Optional logic to pick a default voice dynamically
+    default_voice = "za_male_1"
+    if voices:
+        default_voice = voices[0].get("id", "za_male_1")
+        
     return {
         "voices": voices,
-        "default_voice": config.get("default_voice", "za_male_1"),
+        "default_voice": default_voice,
     }
 
 
@@ -139,6 +144,10 @@ async def generate_speech(request: TTSRequest):
             status_code=500,
             detail="Audio generation failed. Check server logs for details.",
         )
+        
+    # Sync generated file to cloud and database
+    upload_audio_to_storage(cache_key)
+    track_generation(cache_key, request.text, request.voice_id, len(request.text))
 
     return {
         "status": "success",
