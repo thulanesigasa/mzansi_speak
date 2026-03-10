@@ -702,3 +702,66 @@ html[data-theme="dark"] body {
     background-color: var(--orange-dark);
     transform: translateY(-5px);
 }
+
+/* ============================================
+   ERROR TOAST NOTIFICATION
+   ============================================ */
+.error-toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(30px);
+    background-color: var(--section-bg);
+    color: var(--fg);
+    border: 1px solid var(--orange);
+    border-radius: 8px;
+    padding: 1.25rem 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    max-width: 90%;
+    width: max-content;
+}
+
+.error-toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+}
+
+.error-toast-content {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.error-toast-icon {
+    font-size: 1.5rem;
+}
+
+.error-toast-text {
+    font-size: 0.95rem;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.error-toast-close {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.error-toast-close:hover {
+    color: var(--orange);
+}

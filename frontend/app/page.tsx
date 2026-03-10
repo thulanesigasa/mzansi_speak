@@ -58,15 +58,11 @@ export default function Home() {
                 const list: Voice[] = data.voices || [];
                 setVoices(list);
 
-                // Extract unique languages
-                const langs = Array.from(new Set(list.map(v => v.language || "English")));
-                setLanguages(langs);
-
-                // Set default voice
+                // Set default voice (English)
+                const englishVoices = list.filter(v => (v.language || "English") === "English");
                 const defaultId = data.default_voice || "";
-                const defaultVoice = list.find((v) => v.id === defaultId) || list[0] || null;
+                const defaultVoice = englishVoices.find((v) => v.id === defaultId) || englishVoices[0] || null;
                 setVoice(defaultVoice);
-                if (defaultVoice) setSelectedLanguage(defaultVoice.language || "English");
             } catch (err) {
                 console.error("Failed to fetch voices:", err);
                 setVoices([]);
@@ -78,7 +74,7 @@ export default function Home() {
         fetchVoices();
     }, []);
 
-    const filteredVoices = voices.filter(v => (v.language || "English") === selectedLanguage);
+    const filteredVoices = voices.filter(v => (v.language || "English") === "English");
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -115,6 +111,16 @@ export default function Home() {
         voiceName: string;
     }
     const [audioHistory, setAudioHistory] = useState<AudioItem[]>([]);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+    // Auto-clear error after 10 seconds
+    useEffect(() => {
+        if (errorMessage) {
+            const timer = setTimeout(() => setErrorMessage(null), 10000);
+            return () => clearTimeout(timer);
+        }
+    }, [errorMessage]);
+
 
     const handleGenerate = async () => {
         if (!text.trim() || !voice) return;
@@ -126,7 +132,7 @@ export default function Home() {
                 body: JSON.stringify({
                     text,
                     voice_id: voice.id,
-                    lang: voice.language === "English" ? "en-us" : "en-gb" // Fallback phonetic mapping
+                    lang: "en-us" // Strictly English now
                 }),
             });
             const data = await response.json();
@@ -141,10 +147,10 @@ export default function Home() {
                     ...prev
                 ]);
             } else {
-                alert("Generation failed: " + (data.detail || data.message || "Unknown error"));
+                setErrorMessage("Generation failed: " + (data.detail || data.message || "Unknown error"));
             }
         } catch {
-            alert("Error connecting to the TTS service.");
+            setErrorMessage("Error connecting to the TTS service.");
         } finally {
             setLoading(false);
         }
@@ -236,38 +242,11 @@ export default function Home() {
                             <textarea
                                 value={text}
                                 onChange={(e) => setText(e.target.value)}
-                                placeholder="Type your script here..."
+                                placeholder="Type your script here. Spelling is strictly checked."
                                 className="script-input"
+                                spellCheck={true}
+                                lang="en"
                             />
-
-                            {/* Language Switcher */}
-                            <div className="language-row" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem' }}>
-                                {languages.map(lang => (
-                                    <button
-                                        key={lang}
-                                        onClick={() => {
-                                            setSelectedLanguage(lang);
-                                            // Auto-select first voice in this language if current voice is different lang
-                                            const firstInLang = voices.find(v => (v.language || "English") === lang);
-                                            if (firstInLang) setVoice(firstInLang);
-                                        }}
-                                        className={`lang-tab ${selectedLanguage === lang ? "active" : ""}`}
-                                        style={{
-                                            padding: '0.5rem 1rem',
-                                            borderRadius: '2rem',
-                                            border: '1px solid var(--border)',
-                                            background: selectedLanguage === lang ? 'var(--primary)' : 'transparent',
-                                            color: selectedLanguage === lang ? 'var(--bg)' : 'var(--text)',
-                                            fontSize: '0.8rem',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s ease',
-                                            opacity: selectedLanguage === lang ? 1 : 0.6
-                                        }}
-                                    >
-                                        {lang}
-                                    </button>
-                                ))}
-                            </div>
 
                             <div className="controls-row">
                                 {/* Custom Dropdown */}
@@ -392,6 +371,14 @@ export default function Home() {
                     </div>
                 </div>
             </footer>
+            {/* Custom Error Toast */}
+            <div className={`error-toast ${errorMessage ? 'visible' : ''}`}>
+                <div className="error-toast-content">
+                    <div className="error-toast-icon">⚠️</div>
+                    <div className="error-toast-text">{errorMessage}</div>
+                </div>
+                <button onClick={() => setErrorMessage(null)} className="error-toast-close">&times;</button>
+            </div>
         </div>
     );
 }
